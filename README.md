@@ -1,0 +1,2 @@
+# TaRa_Health
+TaRa Health is a personal, agentic AI assistant — Tara — that ingests a single user's health and insurance documents and helps them understand their situation and act on it. Tara answers health and coverage questions grounded in the user's actual documents, and — with explicit confirmation — takes real-world actions such as scheduling appointments, adding calendar events, contacting insurers, refilling prescriptions
