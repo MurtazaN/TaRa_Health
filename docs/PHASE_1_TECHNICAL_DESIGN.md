@@ -6,8 +6,8 @@ pharmacy, delivery). Phase 1 builds the foundation — ingestion, retrieval,
 grounded answering, citations, and the safety layer — that every later phase
 depends on.
 
-**Status:** Draft v0.1
-**Last updated:** [Date]
+**Status:** Draft v0.2
+**Last updated:** 2026-06-22
 
 ---
 
@@ -96,10 +96,14 @@ Three stores, all on device:
 - **Metadata DB:** documents, chunks, page map, classification, timestamps.
 - **Vector index:** chunk embeddings for similarity search.
 
-A single embedded DB can cover the last two — e.g., **SQLite + a vector
-extension (sqlite-vec)**, **LanceDB**, or **Chroma** in local mode. SQLite-based
-options keep the whole thing in one portable file, which fits local-first and
-makes backup/migration trivial.
+**Decision:** the metadata DB and vector index are both **SQLite + sqlite-vec**,
+in one portable file under `TARA_DATA_DIR`, with the original blobs alongside.
+(LanceDB and Chroma were considered; SQLite won for keeping everything in a single
+portable file — backup/migration is "copy the file" — which best fits local-first.)
+Encrypted at rest via SQLCipher when `TARA_DB_KEY` is set. The vector table is
+created separately from the relational schema because it needs the sqlite-vec
+extension loaded; embedding dimension comes from config (`TARA_EMBED_DIM`, must
+match `TARA_EMBED_MODEL`).
 
 ### 3.3 Safety / triage layer
 
@@ -134,9 +138,13 @@ Given the assembled context, the model must:
 - Say **"I don't see that in your documents"** when the context doesn't support an answer — never fabricate coverage numbers or results.
 
 > **Privacy seam:** this is the main point where data may leave the device (if
-> using a hosted model). The hosted-vs-local model choice is tracked in
-> OPEN_QUESTIONS.md (#1). Retrieval and indexing stay local regardless; only the
-> minimal assembled context + question need go to the model.
+> using a hosted model). **Decision:** model selection is a config switch —
+> `TARA_MODEL_MODE` is `local` / `hosted` / `hybrid`, defaulting to `local`
+> (Ollama); the hosted path uses Anthropic. Local-vs-hosted is never a code
+> change. Retrieval and indexing stay local regardless; only the minimal assembled
+> context + question ever go to the model. What remains open is empirical —
+> whether the local model's quality suffices for grounded reasoning (OPEN_QUESTIONS.md
+> #1, to be settled with the §8 eval harness).
 
 ---
 
@@ -251,3 +259,31 @@ foundation established here.
 5. OCR path for scanned docs + images.
 6. Document classification + filtered retrieval.
 7. Eval harness (§8) running against a fixture set of sample documents.
+
+---
+
+## 11. Repository layout
+
+How the design above maps onto the code tree:
+
+```
+tara-health/
+├── pyproject.toml          # deps wired to the chosen stack
+├── .env.example            # config: model mode, paths, models
+├── src/tara/
+│   ├── config.py           # central settings (paths, model mode, embed model)
+│   ├── app.py              # FastAPI: /upload, /ask, / (UI)
+│   ├── ingestion/          # detect → extract(+spans) → classify → chunk → pipeline (§3.1)
+│   ├── embeddings/         # local sentence-transformers (§3.1e)
+│   ├── storage/            # sqlite + sqlite-vec + blobs, SQLCipher-ready (§3.2)
+│   ├── retrieval/          # embed query → vector search (+doc-type filter) (§3.4)
+│   ├── llm/                # base + local_ollama + hosted (hybrid switch) (§3.5)
+│   ├── safety/             # triage (pre-check) + framing (post-check) (§3.3)
+│   ├── answering/          # prompts + answerer — the full query flow (§5.2, §6)
+│   └── web/                # placeholder UI
+├── scripts/init_db.py      # create schema + vector table
+└── tests/                  # ingestion/retrieval/safety + eval_harness (§8)
+```
+
+Every stub marks its intent with a docstring and a `TODO` describing its contract.
+Quickstart commands live in the README and `CLAUDE.md`; build order is §10 above.

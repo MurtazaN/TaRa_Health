@@ -51,14 +51,15 @@ your device by default, and the app serves one user (you).
 
 ## Tech stack
 
-> Fill in as you decide — suggested starting point:
+> Phase 1 (current) — read-only grounded Q&A. The action/integration rows below
+> are the Phase 2+ vision and are **not** implemented yet.
 
-- **Model / orchestration:** [LLM provider + agent framework, e.g. function calling / tool use]
-- **Document parsing:** [PDF parser + OCR]
-- **Vector store / retrieval:** [local-first vector store]
-- **Backend:** [language / framework]
-- **Frontend:** [web / mobile]
-- **Integrations (via APIs / MCP servers):** Google Calendar, Gmail, Reminders, Epic on FHIR (MyChart), CVS/Walgreens pharmacy, Instacart
+- **Model / orchestration:** local-first via Ollama (`qwen3:8b`), with a `local` / `hosted` / `hybrid` config switch; hosted path uses Anthropic (`claude-sonnet-4-6`)
+- **Document parsing:** PyMuPDF / pdfplumber for native-text PDFs (page + char spans preserved for citations); Tesseract OCR for scans *(Phase 1 build step 5)*
+- **Vector store / retrieval:** SQLite + sqlite-vec in one portable, on-device file; local `BAAI/bge-small-en-v1.5` embeddings
+- **Backend:** Python 3.11+ / FastAPI (`tara` console script)
+- **Frontend:** minimal local web UI served by FastAPI
+- **Integrations (Phase 2+, not yet built):** Google Calendar, Gmail, Reminders, Epic on FHIR (MyChart), CVS/Walgreens pharmacy, Instacart
 
 ---
 
@@ -69,16 +70,24 @@ your device by default, and the app serves one user (you).
 git clone https://github.com/<you>/<repo>.git
 cd <repo>
 
-# Install dependencies
-# (add real commands once stack is chosen)
+# Install (dev tools: pytest, ruff, mypy)
+pip install -e ".[dev]"
 
-# Configure environment
+# Pull the local model named in .env (TARA_LOCAL_MODEL)
+ollama pull qwen3:8b
+
+# Configure environment (model mode, paths, models)
 cp .env.example .env
-# add your API keys
 
-# Run
-# (add run command)
+# Create the SQLite schema + sqlite-vec table (run once)
+python scripts/init_db.py
+
+# Run the local server at http://127.0.0.1:8000
+tara
 ```
+
+> Optional encrypted-at-rest storage: `pip install -e ".[encryption]"` (pulls
+> SQLCipher; kept optional so the default install works out of the box).
 
 ---
 

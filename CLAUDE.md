@@ -11,7 +11,7 @@ TaRa Health is a **local-first, single-profile AI health & insurance assistant**
 - **Phase 1 scope (current):** read-only grounded Q&A over the user's documents — ingestion, retrieval, grounded+cited answering, and the safety layer.
 - **Out of scope until Phase 2+:** any agentic *action* (calendar, email, pharmacy, delivery). The README describes the eventual product; the code does not yet do actions.
 
-The authoritative spec is [docs/PHASE_1_TECHNICAL_DESIGN.md](docs/PHASE_1_TECHNICAL_DESIGN.md); orientation is in [docs/SCAFFOLD.md](docs/SCAFFOLD.md).
+The authoritative spec is [docs/PHASE_1_TECHNICAL_DESIGN.md](docs/PHASE_1_TECHNICAL_DESIGN.md) — see its §11 "Repository layout" for the code-tree map.
 
 ## Commands
 

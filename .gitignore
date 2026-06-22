@@ -12,3 +12,4 @@ venv/
 *.egg-info/
 dist/
 build/
+.claude/settings.local.json

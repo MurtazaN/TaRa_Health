@@ -294,7 +294,7 @@
     {
       "label": "BaseSettings",
       "file_type": "code",
-      "source_file": "",
+      "source_file": "src/tara/config.py",
       "source_location": "",
       "id": "basesettings",
       "community": 2,
@@ -454,15 +454,6 @@
       "norm_label": "todo: lightweight classifier \u2014 keyword heuristics first, optional small     llm"
     },
     {
-      "label": "__init__.py",
-      "file_type": "code",
-      "source_file": "src/tara/llm/__init__.py",
-      "source_location": "L1",
-      "id": "src_tara_ingestion_init_py",
-      "community": 20,
-      "norm_label": "__init__.py"
-    },
-    {
       "label": "chunk.py",
       "file_type": "code",
       "source_file": "src/tara/ingestion/chunk.py",
@@ -555,7 +546,7 @@
     {
       "label": "str",
       "file_type": "code",
-      "source_file": "",
+      "source_file": "src/tara/ingestion/detect.py",
       "source_location": "",
       "id": "str",
       "community": 6,
@@ -564,7 +555,7 @@
     {
       "label": "Enum",
       "file_type": "code",
-      "source_file": "",
+      "source_file": "src/tara/ingestion/detect.py",
       "source_location": "",
       "id": "enum",
       "community": 6,
@@ -771,7 +762,7 @@
     {
       "label": "Protocol",
       "file_type": "code",
-      "source_file": "",
+      "source_file": "src/tara/llm/base.py",
       "source_location": "",
       "id": "protocol",
       "community": 3,
@@ -873,7 +864,7 @@
       "source_file": "src/tara/web/static/app.js",
       "source_location": "L1",
       "id": "src_tara_web_static_app_js",
-      "community": 21,
+      "community": 20,
       "norm_label": "app.js"
     },
     {
@@ -1300,6 +1291,15 @@
       "norm_label": "todo: parse [chunk_id] markers from the model output and map each to a     citat"
     },
     {
+      "label": "__init__.py",
+      "file_type": "code",
+      "source_file": "src/tara/llm/__init__.py",
+      "source_location": "L1",
+      "community": 21,
+      "norm_label": "__init__.py",
+      "id": "src_tara_ingestion_init_py"
+    },
+    {
       "label": "Settings",
       "file_type": "code",
       "source_file": "src/tara/config.py",
@@ -1308,9 +1308,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "config_settings",
       "community": 0,
-      "norm_label": "settings"
+      "norm_label": "settings",
+      "id": "config_settings"
     },
     {
       "label": "get_settings",
@@ -1321,9 +1321,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "config_get_settings",
       "community": 0,
-      "norm_label": "get_settings"
+      "norm_label": "get_settings",
+      "id": "config_get_settings"
     },
     {
       "label": "Local-first / on-device privacy principle",
@@ -1334,9 +1334,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "config_local_first",
       "community": 0,
-      "norm_label": "local-first / on-device privacy principle"
+      "norm_label": "local-first / on-device privacy principle",
+      "id": "config_local_first"
     },
     {
       "label": "index endpoint",
@@ -1347,9 +1347,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "app_index",
       "community": 22,
-      "norm_label": "index endpoint"
+      "norm_label": "index endpoint",
+      "id": "app_index"
     },
     {
       "label": "upload endpoint",
@@ -1360,9 +1360,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "app_upload",
       "community": 0,
-      "norm_label": "upload endpoint"
+      "norm_label": "upload endpoint",
+      "id": "app_upload"
     },
     {
       "label": "ask_endpoint",
@@ -1373,9 +1373,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "app_ask_endpoint",
       "community": 23,
-      "norm_label": "ask_endpoint"
+      "norm_label": "ask_endpoint",
+      "id": "app_ask_endpoint"
     },
     {
       "label": "main entry point",
@@ -1386,9 +1386,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "app_main",
       "community": 0,
-      "norm_label": "main entry point"
+      "norm_label": "main entry point",
+      "id": "app_main"
     },
     {
       "label": "classify",
@@ -1399,9 +1399,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "classify_classify",
       "community": 0,
-      "norm_label": "classify"
+      "norm_label": "classify",
+      "id": "classify_classify"
     },
     {
       "label": "Document-type-filtered retrieval",
@@ -1412,9 +1412,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "classify_doctype_filtered_retrieval",
       "community": 0,
-      "norm_label": "document-type-filtered retrieval"
+      "norm_label": "document-type-filtered retrieval",
+      "id": "classify_doctype_filtered_retrieval"
     },
     {
       "label": "chunk",
@@ -1425,9 +1425,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "chunk_chunk",
       "community": 8,
-      "norm_label": "chunk"
+      "norm_label": "chunk",
+      "id": "chunk_chunk"
     },
     {
       "label": "Structural chunking with provenance",
@@ -1438,9 +1438,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "chunk_structural_chunking",
       "community": 8,
-      "norm_label": "structural chunking with provenance"
+      "norm_label": "structural chunking with provenance",
+      "id": "chunk_structural_chunking"
     },
     {
       "label": "ingest",
@@ -1451,9 +1451,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "pipeline_ingest",
       "community": 0,
-      "norm_label": "ingest"
+      "norm_label": "ingest",
+      "id": "pipeline_ingest"
     },
     {
       "label": "SourceKind",
@@ -1464,9 +1464,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "detect_sourcekind",
       "community": 8,
-      "norm_label": "sourcekind"
+      "norm_label": "sourcekind",
+      "id": "detect_sourcekind"
     },
     {
       "label": "detect",
@@ -1477,9 +1477,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "detect_detect",
       "community": 8,
-      "norm_label": "detect"
+      "norm_label": "detect",
+      "id": "detect_detect"
     },
     {
       "label": "OCR vs native-text extraction routing",
@@ -1490,9 +1490,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "detect_ocr_routing",
       "community": 8,
-      "norm_label": "ocr vs native-text extraction routing"
+      "norm_label": "ocr vs native-text extraction routing",
+      "id": "detect_ocr_routing"
     },
     {
       "label": "ExtractedSpan",
@@ -1503,9 +1503,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "extract_extractedspan",
       "community": 8,
-      "norm_label": "extractedspan"
+      "norm_label": "extractedspan",
+      "id": "extract_extractedspan"
     },
     {
       "label": "extract",
@@ -1516,9 +1516,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "extract_extract",
       "community": 8,
-      "norm_label": "extract"
+      "norm_label": "extract",
+      "id": "extract_extract"
     },
     {
       "label": "_extract_pymupdf",
@@ -1529,9 +1529,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "extract__extract_pymupdf",
       "community": 8,
-      "norm_label": "_extract_pymupdf"
+      "norm_label": "_extract_pymupdf",
+      "id": "extract__extract_pymupdf"
     },
     {
       "label": "_extract_docling",
@@ -1542,9 +1542,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "extract__extract_docling",
       "community": 8,
-      "norm_label": "_extract_docling"
+      "norm_label": "_extract_docling",
+      "id": "extract__extract_docling"
     },
     {
       "label": "Provenance preservation enables citations",
@@ -1555,9 +1555,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "extract_provenance_citations",
       "community": 8,
-      "norm_label": "provenance preservation enables citations"
+      "norm_label": "provenance preservation enables citations",
+      "id": "extract_provenance_citations"
     },
     {
       "label": "HostedClient",
@@ -1568,9 +1568,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "hosted_hostedclient",
       "community": 0,
-      "norm_label": "hostedclient"
+      "norm_label": "hostedclient",
+      "id": "hosted_hostedclient"
     },
     {
       "label": "Send minimal payload to hosted model",
@@ -1581,9 +1581,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "hosted_minimal_payload",
       "community": 0,
-      "norm_label": "send minimal payload to hosted model"
+      "norm_label": "send minimal payload to hosted model",
+      "id": "hosted_minimal_payload"
     },
     {
       "label": "LocalOllamaClient",
@@ -1594,9 +1594,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "local_ollama_localollamaclient",
       "community": 0,
-      "norm_label": "localollamaclient"
+      "norm_label": "localollamaclient",
+      "id": "local_ollama_localollamaclient"
     },
     {
       "label": "LLMClient protocol",
@@ -1607,9 +1607,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "base_llmclient",
       "community": 0,
-      "norm_label": "llmclient protocol"
+      "norm_label": "llmclient protocol",
+      "id": "base_llmclient"
     },
     {
       "label": "get_client",
@@ -1620,9 +1620,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "base_get_client",
       "community": 0,
-      "norm_label": "get_client"
+      "norm_label": "get_client",
+      "id": "base_get_client"
     },
     {
       "label": "Provider selection as config not code",
@@ -1633,9 +1633,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "base_provider_via_config",
       "community": 0,
-      "norm_label": "provider selection as config not code"
+      "norm_label": "provider selection as config not code",
+      "id": "base_provider_via_config"
     },
     {
       "label": "_model",
@@ -1646,9 +1646,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "embedder__model",
       "community": 0,
-      "norm_label": "_model"
+      "norm_label": "_model",
+      "id": "embedder__model"
     },
     {
       "label": "embed_texts",
@@ -1659,9 +1659,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "embedder_embed_texts",
       "community": 0,
-      "norm_label": "embed_texts"
+      "norm_label": "embed_texts",
+      "id": "embedder_embed_texts"
     },
     {
       "label": "embed_query",
@@ -1672,9 +1672,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "embedder_embed_query",
       "community": 0,
-      "norm_label": "embed_query"
+      "norm_label": "embed_query",
+      "id": "embedder_embed_query"
     },
     {
       "label": "connect",
@@ -1685,9 +1685,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "db_connect",
       "community": 0,
-      "norm_label": "connect"
+      "norm_label": "connect",
+      "id": "db_connect"
     },
     {
       "label": "init_schema",
@@ -1698,9 +1698,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "db_init_schema",
       "community": 0,
-      "norm_label": "init_schema"
+      "norm_label": "init_schema",
+      "id": "db_init_schema"
     },
     {
       "label": "SQLite SCHEMA",
@@ -1711,9 +1711,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "db_schema",
       "community": 0,
-      "norm_label": "sqlite schema"
+      "norm_label": "sqlite schema",
+      "id": "db_schema"
     },
     {
       "label": "SQLCipher at-rest encryption",
@@ -1724,9 +1724,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "db_sqlcipher_encryption",
       "community": 0,
-      "norm_label": "sqlcipher at-rest encryption"
+      "norm_label": "sqlcipher at-rest encryption",
+      "id": "db_sqlcipher_encryption"
     },
     {
       "label": "_load_vec",
@@ -1737,9 +1737,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "vector__load_vec",
       "community": 0,
-      "norm_label": "_load_vec"
+      "norm_label": "_load_vec",
+      "id": "vector__load_vec"
     },
     {
       "label": "init_vector_table",
@@ -1750,9 +1750,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "vector_init_vector_table",
       "community": 0,
-      "norm_label": "init_vector_table"
+      "norm_label": "init_vector_table",
+      "id": "vector_init_vector_table"
     },
     {
       "label": "vector add",
@@ -1763,9 +1763,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "vector_add",
       "community": 24,
-      "norm_label": "vector add"
+      "norm_label": "vector add",
+      "id": "vector_add"
     },
     {
       "label": "vector search",
@@ -1776,9 +1776,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "vector_search",
       "community": 0,
-      "norm_label": "vector search"
+      "norm_label": "vector search",
+      "id": "vector_search"
     },
     {
       "label": "DocType",
@@ -1789,9 +1789,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "models_doctype",
       "community": 0,
-      "norm_label": "doctype"
+      "norm_label": "doctype",
+      "id": "models_doctype"
     },
     {
       "label": "Document",
@@ -1802,9 +1802,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "models_document",
       "community": 0,
-      "norm_label": "document"
+      "norm_label": "document",
+      "id": "models_document"
     },
     {
       "label": "Chunk",
@@ -1815,9 +1815,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "models_chunk",
       "community": 8,
-      "norm_label": "chunk"
+      "norm_label": "chunk",
+      "id": "models_chunk"
     },
     {
       "label": "Citation",
@@ -1828,9 +1828,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "models_citation",
       "community": 8,
-      "norm_label": "citation"
+      "norm_label": "citation",
+      "id": "models_citation"
     },
     {
       "label": "blobs save",
@@ -1841,9 +1841,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "blobs_save",
       "community": 0,
-      "norm_label": "blobs save"
+      "norm_label": "blobs save",
+      "id": "blobs_save"
     },
     {
       "label": "blobs load",
@@ -1854,9 +1854,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "blobs_load",
       "community": 25,
-      "norm_label": "blobs load"
+      "norm_label": "blobs load",
+      "id": "blobs_load"
     },
     {
       "label": "screen (emergency pre-check)",
@@ -1867,9 +1867,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "triage_screen",
       "community": 1,
-      "norm_label": "screen (emergency pre-check)"
+      "norm_label": "screen (emergency pre-check)",
+      "id": "triage_screen"
     },
     {
       "label": "TriageResult",
@@ -1880,9 +1880,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "triage_triageresult",
       "community": 1,
-      "norm_label": "triageresult"
+      "norm_label": "triageresult",
+      "id": "triage_triageresult"
     },
     {
       "label": "RED_FLAG_PATTERNS",
@@ -1893,9 +1893,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "triage_red_flag_patterns",
       "community": 1,
-      "norm_label": "red_flag_patterns"
+      "norm_label": "red_flag_patterns",
+      "id": "triage_red_flag_patterns"
     },
     {
       "label": "apply_framing (framing post-check)",
@@ -1906,9 +1906,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "framing_apply_framing",
       "community": 1,
-      "norm_label": "apply_framing (framing post-check)"
+      "norm_label": "apply_framing (framing post-check)",
+      "id": "framing_apply_framing"
     },
     {
       "label": "retrieve",
@@ -1919,9 +1919,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "retriever_retrieve",
       "community": 1,
-      "norm_label": "retrieve"
+      "norm_label": "retrieve",
+      "id": "retriever_retrieve"
     },
     {
       "label": "RetrievedChunk",
@@ -1932,9 +1932,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "retriever_retrievedchunk",
       "community": 1,
-      "norm_label": "retrievedchunk"
+      "norm_label": "retrievedchunk",
+      "id": "retriever_retrievedchunk"
     },
     {
       "label": "ANSWER_SYSTEM prompt",
@@ -1945,9 +1945,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "prompts_answer_system",
       "community": 1,
-      "norm_label": "answer_system prompt"
+      "norm_label": "answer_system prompt",
+      "id": "prompts_answer_system"
     },
     {
       "label": "build_user_prompt",
@@ -1958,9 +1958,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "prompts_build_user_prompt",
       "community": 1,
-      "norm_label": "build_user_prompt"
+      "norm_label": "build_user_prompt",
+      "id": "prompts_build_user_prompt"
     },
     {
       "label": "ask (query flow)",
@@ -1971,9 +1971,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "answerer_ask",
       "community": 1,
-      "norm_label": "ask (query flow)"
+      "norm_label": "ask (query flow)",
+      "id": "answerer_ask"
     },
     {
       "label": "Answer",
@@ -1984,9 +1984,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "answerer_answer",
       "community": 1,
-      "norm_label": "answer"
+      "norm_label": "answer",
+      "id": "answerer_answer"
     },
     {
       "label": "_extract_citations",
@@ -1997,9 +1997,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "answerer__extract_citations",
       "community": 1,
-      "norm_label": "_extract_citations"
+      "norm_label": "_extract_citations",
+      "id": "answerer__extract_citations"
     },
     {
       "label": "web client app.js",
@@ -2010,9 +2010,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "app_out",
       "community": 1,
-      "norm_label": "web client app.js"
+      "norm_label": "web client app.js",
+      "id": "app_out"
     },
     {
       "label": "index.html placeholder UI",
@@ -2023,9 +2023,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_index",
       "community": 1,
-      "norm_label": "index.html placeholder ui"
+      "norm_label": "index.html placeholder ui",
+      "id": "index_index"
     },
     {
       "label": "fixtures_dir fixture",
@@ -2036,9 +2036,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "conftest_fixtures_dir",
       "community": 1,
-      "norm_label": "fixtures_dir fixture"
+      "norm_label": "fixtures_dir fixture",
+      "id": "conftest_fixtures_dir"
     },
     {
       "label": "test_topk_hit_rate",
@@ -2049,9 +2049,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "test_retrieval_test_topk_hit_rate",
       "community": 1,
-      "norm_label": "test_topk_hit_rate"
+      "norm_label": "test_topk_hit_rate",
+      "id": "test_retrieval_test_topk_hit_rate"
     },
     {
       "label": "eval_harness main",
@@ -2062,9 +2062,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "eval_harness_main",
       "community": 1,
-      "norm_label": "eval_harness main"
+      "norm_label": "eval_harness main",
+      "id": "eval_harness_main"
     },
     {
       "label": "test_emergencies_are_caught",
@@ -2075,9 +2075,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "test_safety_test_emergencies_are_caught",
       "community": 1,
-      "norm_label": "test_emergencies_are_caught"
+      "norm_label": "test_emergencies_are_caught",
+      "id": "test_safety_test_emergencies_are_caught"
     },
     {
       "label": "test_extract_preserves_provenance",
@@ -2088,9 +2088,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "test_ingestion_test_extract_preserves_provenance",
       "community": 1,
-      "norm_label": "test_extract_preserves_provenance"
+      "norm_label": "test_extract_preserves_provenance",
+      "id": "test_ingestion_test_extract_preserves_provenance"
     },
     {
       "label": "init_db main",
@@ -2101,9 +2101,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "init_db_main",
       "community": 9,
-      "norm_label": "init_db main"
+      "norm_label": "init_db main",
+      "id": "init_db_main"
     },
     {
       "label": "Phase 1 Scaffold orientation",
@@ -2114,9 +2114,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "scaffold_phase1_scaffold",
       "community": 9,
-      "norm_label": "phase 1 scaffold orientation"
+      "norm_label": "phase 1 scaffold orientation",
+      "id": "scaffold_phase1_scaffold"
     },
     {
       "label": "Model/provider choice (local vs hosted vs hybrid)",
@@ -2127,9 +2127,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "open_questions_model_provider_choice",
       "community": 9,
-      "norm_label": "model/provider choice (local vs hosted vs hybrid)"
+      "norm_label": "model/provider choice (local vs hosted vs hybrid)",
+      "id": "open_questions_model_provider_choice"
     },
     {
       "label": "Local-first storage decision",
@@ -2140,9 +2140,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "open_questions_local_first_decision",
       "community": 9,
-      "norm_label": "local-first storage decision"
+      "norm_label": "local-first storage decision",
+      "id": "open_questions_local_first_decision"
     },
     {
       "label": "Single-profile decision",
@@ -2153,9 +2153,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "open_questions_single_profile_decision",
       "community": 9,
-      "norm_label": "single-profile decision"
+      "norm_label": "single-profile decision",
+      "id": "open_questions_single_profile_decision"
     },
     {
       "label": "TaRa Health PRD",
@@ -2166,9 +2166,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "prd_tara_health",
       "community": 9,
-      "norm_label": "tara health prd"
+      "norm_label": "tara health prd",
+      "id": "prd_tara_health"
     },
     {
       "label": "Agentic application",
@@ -2179,9 +2179,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "prd_agentic_application",
       "community": 14,
-      "norm_label": "agentic application"
+      "norm_label": "agentic application",
+      "id": "prd_agentic_application"
     },
     {
       "label": "Safety layer (emergency detection + framing)",
@@ -2192,9 +2192,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "prd_safety_layer",
       "community": 1,
-      "norm_label": "safety layer (emergency detection + framing)"
+      "norm_label": "safety layer (emergency detection + framing)",
+      "id": "prd_safety_layer"
     },
     {
       "label": "Confirmation gate",
@@ -2205,9 +2205,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "prd_confirmation_gate",
       "community": 14,
-      "norm_label": "confirmation gate"
+      "norm_label": "confirmation gate",
+      "id": "prd_confirmation_gate"
     },
     {
       "label": "Tool layer / integration landscape",
@@ -2218,9 +2218,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "prd_tool_layer",
       "community": 14,
-      "norm_label": "tool layer / integration landscape"
+      "norm_label": "tool layer / integration landscape",
+      "id": "prd_tool_layer"
     },
     {
       "label": "Phase 1 Technical Design",
@@ -2231,9 +2231,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "phase_1_technical_design_phase1_design",
       "community": 9,
-      "norm_label": "phase 1 technical design"
+      "norm_label": "phase 1 technical design",
+      "id": "phase_1_technical_design_phase1_design"
     },
     {
       "label": "Ingestion pipeline",
@@ -2244,9 +2244,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "phase_1_technical_design_ingestion_pipeline",
       "community": 26,
-      "norm_label": "ingestion pipeline"
+      "norm_label": "ingestion pipeline",
+      "id": "phase_1_technical_design_ingestion_pipeline"
     },
     {
       "label": "Retrieval (embed query + vector search + filter)",
@@ -2257,9 +2257,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "phase_1_technical_design_retrieval",
       "community": 1,
-      "norm_label": "retrieval (embed query + vector search + filter)"
+      "norm_label": "retrieval (embed query + vector search + filter)",
+      "id": "phase_1_technical_design_retrieval"
     },
     {
       "label": "Answering LLM (grounding + citation)",
@@ -2270,9 +2270,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "phase_1_technical_design_answering_llm",
       "community": 1,
-      "norm_label": "answering llm (grounding + citation)"
+      "norm_label": "answering llm (grounding + citation)",
+      "id": "phase_1_technical_design_answering_llm"
     },
     {
       "label": "Provenance-based citations",
@@ -2283,9 +2283,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "phase_1_technical_design_provenance_citations",
       "community": 1,
-      "norm_label": "provenance-based citations"
+      "norm_label": "provenance-based citations",
+      "id": "phase_1_technical_design_provenance_citations"
     },
     {
       "label": "Local storage (SQLite + sqlite-vec)",
@@ -2296,9 +2296,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "phase_1_technical_design_local_storage",
       "community": 9,
-      "norm_label": "local storage (sqlite + sqlite-vec)"
+      "norm_label": "local storage (sqlite + sqlite-vec)",
+      "id": "phase_1_technical_design_local_storage"
     },
     {
       "label": "Phase 1 eval metrics",
@@ -2309,9 +2309,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "phase_1_technical_design_eval_metrics",
       "community": 1,
-      "norm_label": "phase 1 eval metrics"
+      "norm_label": "phase 1 eval metrics",
+      "id": "phase_1_technical_design_eval_metrics"
     },
     {
       "label": "TaRa Health README",
@@ -2322,9 +2322,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "readme_tara_health",
       "community": 14,
-      "norm_label": "tara health readme"
+      "norm_label": "tara health readme",
+      "id": "readme_tara_health"
     },
     {
       "label": "CLAUDE.md repo guidance",
@@ -2335,9 +2335,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "claude_tara_health_guidance",
       "community": 9,
-      "norm_label": "claude.md repo guidance"
+      "norm_label": "claude.md repo guidance",
+      "id": "claude_tara_health_guidance"
     }
   ],
   "links": [
@@ -2347,9 +2347,9 @@
       "source_file": "tests/conftest.py",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_conftest_py",
-      "target": "tests_conftest_fixtures_dir",
-      "confidence_score": 1.0
+      "target": "tests_conftest_fixtures_dir"
     },
     {
       "relation": "rationale_for",
@@ -2357,9 +2357,9 @@
       "source_file": "tests/conftest.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_conftest_rationale_1",
-      "target": "tests_conftest_py",
-      "confidence_score": 1.0
+      "target": "tests_conftest_py"
     },
     {
       "relation": "contains",
@@ -2367,9 +2367,9 @@
       "source_file": "tests/test_retrieval.py",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_retrieval_py",
-      "target": "tests_test_retrieval_test_topk_hit_rate",
-      "confidence_score": 1.0
+      "target": "tests_test_retrieval_test_topk_hit_rate"
     },
     {
       "relation": "rationale_for",
@@ -2377,9 +2377,9 @@
       "source_file": "tests/test_retrieval.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_retrieval_rationale_1",
-      "target": "tests_test_retrieval_py",
-      "confidence_score": 1.0
+      "target": "tests_test_retrieval_py"
     },
     {
       "relation": "contains",
@@ -2387,9 +2387,9 @@
       "source_file": "tests/eval_harness.py",
       "source_location": "L14",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_eval_harness_py",
-      "target": "tests_eval_harness_main",
-      "confidence_score": 1.0
+      "target": "tests_eval_harness_main"
     },
     {
       "relation": "rationale_for",
@@ -2397,9 +2397,9 @@
       "source_file": "tests/eval_harness.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_eval_harness_rationale_1",
-      "target": "tests_eval_harness_py",
-      "confidence_score": 1.0
+      "target": "tests_eval_harness_py"
     },
     {
       "relation": "rationale_for",
@@ -2407,9 +2407,9 @@
       "source_file": "tests/eval_harness.py",
       "source_location": "L15",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_eval_harness_rationale_15",
-      "target": "tests_eval_harness_py",
-      "confidence_score": 1.0
+      "target": "tests_eval_harness_py"
     },
     {
       "relation": "contains",
@@ -2417,9 +2417,9 @@
       "source_file": "tests/test_safety.py",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_safety_py",
-      "target": "tests_test_safety_test_emergencies_are_caught",
-      "confidence_score": 1.0
+      "target": "tests_test_safety_test_emergencies_are_caught"
     },
     {
       "relation": "rationale_for",
@@ -2427,9 +2427,9 @@
       "source_file": "tests/test_safety.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_safety_rationale_1",
-      "target": "tests_test_safety_py",
-      "confidence_score": 1.0
+      "target": "tests_test_safety_py"
     },
     {
       "relation": "calls",
@@ -2448,9 +2448,9 @@
       "source_file": "tests/test_ingestion.py",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_ingestion_py",
-      "target": "tests_test_ingestion_test_extract_preserves_provenance",
-      "confidence_score": 1.0
+      "target": "tests_test_ingestion_test_extract_preserves_provenance"
     },
     {
       "relation": "rationale_for",
@@ -2458,9 +2458,9 @@
       "source_file": "tests/test_ingestion.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_ingestion_rationale_1",
-      "target": "tests_test_ingestion_py",
-      "confidence_score": 1.0
+      "target": "tests_test_ingestion_py"
     },
     {
       "relation": "contains",
@@ -2468,9 +2468,9 @@
       "source_file": "scripts/init_db.py",
       "source_location": "L9",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "scripts_init_db_py",
-      "target": "scripts_init_db_main",
-      "confidence_score": 1.0
+      "target": "scripts_init_db_main"
     },
     {
       "relation": "rationale_for",
@@ -2478,9 +2478,9 @@
       "source_file": "scripts/init_db.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "scripts_init_db_rationale_1",
-      "target": "scripts_init_db_py",
-      "confidence_score": 1.0
+      "target": "scripts_init_db_py"
     },
     {
       "relation": "calls",
@@ -2521,9 +2521,9 @@
       "source_file": "src/tara/config.py",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_config_py",
-      "target": "tara_config_settings",
-      "confidence_score": 1.0
+      "target": "tara_config_settings"
     },
     {
       "relation": "contains",
@@ -2531,9 +2531,9 @@
       "source_file": "src/tara/config.py",
       "source_location": "L41",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_config_py",
-      "target": "tara_config_db_path",
-      "confidence_score": 1.0
+      "target": "tara_config_db_path"
     },
     {
       "relation": "contains",
@@ -2541,9 +2541,9 @@
       "source_file": "src/tara/config.py",
       "source_location": "L45",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_config_py",
-      "target": "tara_config_blob_dir",
-      "confidence_score": 1.0
+      "target": "tara_config_blob_dir"
     },
     {
       "relation": "contains",
@@ -2551,9 +2551,9 @@
       "source_file": "src/tara/config.py",
       "source_location": "L50",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_config_py",
-      "target": "tara_config_get_settings",
-      "confidence_score": 1.0
+      "target": "tara_config_get_settings"
     },
     {
       "relation": "rationale_for",
@@ -2561,9 +2561,9 @@
       "source_file": "src/tara/config.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tara_config_rationale_1",
-      "target": "src_tara_config_py",
-      "confidence_score": 1.0
+      "target": "src_tara_config_py"
     },
     {
       "relation": "inherits",
@@ -2571,9 +2571,9 @@
       "source_file": "src/tara/config.py",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tara_config_settings",
-      "target": "basesettings",
-      "confidence_score": 1.0
+      "target": "basesettings"
     },
     {
       "relation": "calls",
@@ -2582,9 +2582,9 @@
       "source_file": "src/tara/config.py",
       "source_location": "L51",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tara_config_get_settings",
-      "target": "tara_config_settings",
-      "confidence_score": 1.0
+      "target": "tara_config_settings"
     },
     {
       "relation": "calls",
@@ -2669,9 +2669,9 @@
       "source_file": "src/tara/__init__.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tara_init_rationale_1",
-      "target": "src_tara_init_py",
-      "confidence_score": 1.0
+      "target": "src_tara_init_py"
     },
     {
       "relation": "contains",
@@ -2679,9 +2679,9 @@
       "source_file": "src/tara/app.py",
       "source_location": "L24",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_app_py",
-      "target": "tara_app_index",
-      "confidence_score": 1.0
+      "target": "tara_app_index"
     },
     {
       "relation": "contains",
@@ -2689,9 +2689,9 @@
       "source_file": "src/tara/app.py",
       "source_location": "L29",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_app_py",
-      "target": "tara_app_upload",
-      "confidence_score": 1.0
+      "target": "tara_app_upload"
     },
     {
       "relation": "contains",
@@ -2699,9 +2699,9 @@
       "source_file": "src/tara/app.py",
       "source_location": "L35",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_app_py",
-      "target": "tara_app_ask_endpoint",
-      "confidence_score": 1.0
+      "target": "tara_app_ask_endpoint"
     },
     {
       "relation": "contains",
@@ -2709,9 +2709,9 @@
       "source_file": "src/tara/app.py",
       "source_location": "L44",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_app_py",
-      "target": "tara_app_main",
-      "confidence_score": 1.0
+      "target": "tara_app_main"
     },
     {
       "relation": "rationale_for",
@@ -2719,9 +2719,9 @@
       "source_file": "src/tara/app.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tara_app_rationale_1",
-      "target": "src_tara_app_py",
-      "confidence_score": 1.0
+      "target": "src_tara_app_py"
     },
     {
       "relation": "calls",
@@ -2751,9 +2751,9 @@
       "source_file": "src/tara/app.py",
       "source_location": "L45",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tara_app_rationale_45",
-      "target": "tara_app_main",
-      "confidence_score": 1.0
+      "target": "tara_app_main"
     },
     {
       "relation": "calls",
@@ -2772,9 +2772,9 @@
       "source_file": "src/tara/ingestion/classify.py",
       "source_location": "L9",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_ingestion_classify_py",
-      "target": "ingestion_classify_classify",
-      "confidence_score": 1.0
+      "target": "ingestion_classify_classify"
     },
     {
       "relation": "rationale_for",
@@ -2782,9 +2782,9 @@
       "source_file": "src/tara/ingestion/classify.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ingestion_classify_rationale_1",
-      "target": "src_tara_ingestion_classify_py",
-      "confidence_score": 1.0
+      "target": "src_tara_ingestion_classify_py"
     },
     {
       "relation": "rationale_for",
@@ -2792,9 +2792,9 @@
       "source_file": "src/tara/ingestion/classify.py",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ingestion_classify_rationale_10",
-      "target": "ingestion_classify_classify",
-      "confidence_score": 1.0
+      "target": "ingestion_classify_classify"
     },
     {
       "relation": "calls",
@@ -2813,9 +2813,9 @@
       "source_file": "src/tara/ingestion/chunk.py",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_ingestion_chunk_py",
-      "target": "ingestion_chunk_chunk",
-      "confidence_score": 1.0
+      "target": "ingestion_chunk_chunk"
     },
     {
       "relation": "rationale_for",
@@ -2823,9 +2823,9 @@
       "source_file": "src/tara/ingestion/chunk.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ingestion_chunk_rationale_1",
-      "target": "src_tara_ingestion_chunk_py",
-      "confidence_score": 1.0
+      "target": "src_tara_ingestion_chunk_py"
     },
     {
       "relation": "rationale_for",
@@ -2833,9 +2833,9 @@
       "source_file": "src/tara/ingestion/chunk.py",
       "source_location": "L12",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ingestion_chunk_rationale_12",
-      "target": "ingestion_chunk_chunk",
-      "confidence_score": 1.0
+      "target": "ingestion_chunk_chunk"
     },
     {
       "relation": "contains",
@@ -2843,9 +2843,9 @@
       "source_file": "src/tara/ingestion/pipeline.py",
       "source_location": "L20",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_ingestion_pipeline_py",
-      "target": "ingestion_pipeline_ingest",
-      "confidence_score": 1.0
+      "target": "ingestion_pipeline_ingest"
     },
     {
       "relation": "rationale_for",
@@ -2853,9 +2853,9 @@
       "source_file": "src/tara/ingestion/pipeline.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ingestion_pipeline_rationale_1",
-      "target": "src_tara_ingestion_pipeline_py",
-      "confidence_score": 1.0
+      "target": "src_tara_ingestion_pipeline_py"
     },
     {
       "relation": "rationale_for",
@@ -2863,9 +2863,9 @@
       "source_file": "src/tara/ingestion/pipeline.py",
       "source_location": "L31",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ingestion_pipeline_rationale_31",
-      "target": "src_tara_ingestion_pipeline_py",
-      "confidence_score": 1.0
+      "target": "src_tara_ingestion_pipeline_py"
     },
     {
       "relation": "calls",
@@ -2896,9 +2896,9 @@
       "source_file": "src/tara/ingestion/detect.py",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_ingestion_detect_py",
-      "target": "enum",
-      "confidence_score": 1.0
+      "target": "enum"
     },
     {
       "relation": "contains",
@@ -2906,9 +2906,9 @@
       "source_file": "src/tara/ingestion/detect.py",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_ingestion_detect_py",
-      "target": "ingestion_detect_sourcekind",
-      "confidence_score": 1.0
+      "target": "ingestion_detect_sourcekind"
     },
     {
       "relation": "contains",
@@ -2916,9 +2916,9 @@
       "source_file": "src/tara/ingestion/detect.py",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_ingestion_detect_py",
-      "target": "ingestion_detect_detect",
-      "confidence_score": 1.0
+      "target": "ingestion_detect_detect"
     },
     {
       "relation": "rationale_for",
@@ -2926,9 +2926,9 @@
       "source_file": "src/tara/ingestion/detect.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ingestion_detect_rationale_1",
-      "target": "src_tara_ingestion_detect_py",
-      "confidence_score": 1.0
+      "target": "src_tara_ingestion_detect_py"
     },
     {
       "relation": "inherits",
@@ -2936,9 +2936,9 @@
       "source_file": "src/tara/ingestion/detect.py",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ingestion_detect_sourcekind",
-      "target": "str",
-      "confidence_score": 1.0
+      "target": "str"
     },
     {
       "relation": "inherits",
@@ -2946,9 +2946,9 @@
       "source_file": "src/tara/ingestion/detect.py",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ingestion_detect_sourcekind",
-      "target": "enum",
-      "confidence_score": 1.0
+      "target": "enum"
     },
     {
       "relation": "uses",
@@ -2956,9 +2956,9 @@
       "source_file": "src/tara/ingestion/extract.py",
       "source_location": "L12",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "ingestion_extract_extractedspan",
-      "target": "ingestion_detect_sourcekind",
-      "confidence_score": 0.5
+      "target": "ingestion_detect_sourcekind"
     },
     {
       "relation": "rationale_for",
@@ -2966,9 +2966,9 @@
       "source_file": "src/tara/ingestion/detect.py",
       "source_location": "L17",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ingestion_detect_rationale_17",
-      "target": "ingestion_detect_detect",
-      "confidence_score": 1.0
+      "target": "ingestion_detect_detect"
     },
     {
       "relation": "calls",
@@ -2987,9 +2987,9 @@
       "source_file": "src/tara/ingestion/extract.py",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_ingestion_extract_py",
-      "target": "ingestion_extract_extractedspan",
-      "confidence_score": 1.0
+      "target": "ingestion_extract_extractedspan"
     },
     {
       "relation": "contains",
@@ -2997,9 +2997,9 @@
       "source_file": "src/tara/ingestion/extract.py",
       "source_location": "L23",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_ingestion_extract_py",
-      "target": "ingestion_extract_extract",
-      "confidence_score": 1.0
+      "target": "ingestion_extract_extract"
     },
     {
       "relation": "contains",
@@ -3007,9 +3007,9 @@
       "source_file": "src/tara/ingestion/extract.py",
       "source_location": "L30",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_ingestion_extract_py",
-      "target": "ingestion_extract_extract_pymupdf",
-      "confidence_score": 1.0
+      "target": "ingestion_extract_extract_pymupdf"
     },
     {
       "relation": "contains",
@@ -3017,9 +3017,9 @@
       "source_file": "src/tara/ingestion/extract.py",
       "source_location": "L35",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_ingestion_extract_py",
-      "target": "ingestion_extract_extract_docling",
-      "confidence_score": 1.0
+      "target": "ingestion_extract_extract_docling"
     },
     {
       "relation": "rationale_for",
@@ -3027,9 +3027,9 @@
       "source_file": "src/tara/ingestion/extract.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ingestion_extract_rationale_1",
-      "target": "src_tara_ingestion_extract_py",
-      "confidence_score": 1.0
+      "target": "src_tara_ingestion_extract_py"
     },
     {
       "relation": "calls",
@@ -3038,9 +3038,9 @@
       "source_file": "src/tara/ingestion/extract.py",
       "source_location": "L26",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ingestion_extract_extract",
-      "target": "ingestion_extract_extract_pymupdf",
-      "confidence_score": 1.0
+      "target": "ingestion_extract_extract_pymupdf"
     },
     {
       "relation": "calls",
@@ -3049,9 +3049,9 @@
       "source_file": "src/tara/ingestion/extract.py",
       "source_location": "L27",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ingestion_extract_extract",
-      "target": "ingestion_extract_extract_docling",
-      "confidence_score": 1.0
+      "target": "ingestion_extract_extract_docling"
     },
     {
       "relation": "rationale_for",
@@ -3059,9 +3059,9 @@
       "source_file": "src/tara/ingestion/extract.py",
       "source_location": "L31",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ingestion_extract_rationale_31",
-      "target": "ingestion_extract_extract_pymupdf",
-      "confidence_score": 1.0
+      "target": "ingestion_extract_extract_pymupdf"
     },
     {
       "relation": "rationale_for",
@@ -3069,9 +3069,9 @@
       "source_file": "src/tara/ingestion/extract.py",
       "source_location": "L36",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ingestion_extract_rationale_36",
-      "target": "ingestion_extract_extract_docling",
-      "confidence_score": 1.0
+      "target": "ingestion_extract_extract_docling"
     },
     {
       "relation": "contains",
@@ -3079,9 +3079,9 @@
       "source_file": "src/tara/llm/hosted.py",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_llm_hosted_py",
-      "target": "llm_hosted_hostedclient",
-      "confidence_score": 1.0
+      "target": "llm_hosted_hostedclient"
     },
     {
       "relation": "rationale_for",
@@ -3089,9 +3089,9 @@
       "source_file": "src/tara/llm/hosted.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "llm_hosted_rationale_1",
-      "target": "src_tara_llm_hosted_py",
-      "confidence_score": 1.0
+      "target": "src_tara_llm_hosted_py"
     },
     {
       "relation": "rationale_for",
@@ -3099,9 +3099,9 @@
       "source_file": "src/tara/llm/hosted.py",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "llm_hosted_rationale_10",
-      "target": "src_tara_llm_hosted_py",
-      "confidence_score": 1.0
+      "target": "src_tara_llm_hosted_py"
     },
     {
       "relation": "method",
@@ -3109,19 +3109,9 @@
       "source_file": "src/tara/llm/hosted.py",
       "source_location": "L9",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "llm_hosted_hostedclient",
-      "target": "llm_hosted_hostedclient_complete",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "uses",
-      "confidence": "INFERRED",
-      "source_file": "src/tara/llm/base.py",
-      "source_location": "L23",
-      "weight": 0.8,
-      "source": "llm_base_llmclient",
-      "target": "llm_hosted_hostedclient",
-      "confidence_score": 0.5
+      "target": "llm_hosted_hostedclient_complete"
     },
     {
       "relation": "calls",
@@ -3135,14 +3125,24 @@
       "target": "llm_hosted_hostedclient"
     },
     {
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "src/tara/llm/base.py",
+      "source_location": "L23",
+      "weight": 0.8,
+      "confidence_score": 0.5,
+      "source": "llm_base_llmclient",
+      "target": "llm_hosted_hostedclient"
+    },
+    {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/tara/llm/local_ollama.py",
       "source_location": "L9",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_llm_local_ollama_py",
-      "target": "llm_local_ollama_localollamaclient",
-      "confidence_score": 1.0
+      "target": "llm_local_ollama_localollamaclient"
     },
     {
       "relation": "rationale_for",
@@ -3150,9 +3150,9 @@
       "source_file": "src/tara/llm/local_ollama.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "llm_local_ollama_rationale_1",
-      "target": "src_tara_llm_local_ollama_py",
-      "confidence_score": 1.0
+      "target": "src_tara_llm_local_ollama_py"
     },
     {
       "relation": "method",
@@ -3160,19 +3160,9 @@
       "source_file": "src/tara/llm/local_ollama.py",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "llm_local_ollama_localollamaclient",
-      "target": "llm_local_ollama_localollamaclient_complete",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "uses",
-      "confidence": "INFERRED",
-      "source_file": "src/tara/llm/base.py",
-      "source_location": "L24",
-      "weight": 0.8,
-      "source": "llm_base_llmclient",
-      "target": "llm_local_ollama_localollamaclient",
-      "confidence_score": 0.5
+      "target": "llm_local_ollama_localollamaclient_complete"
     },
     {
       "relation": "calls",
@@ -3186,14 +3176,24 @@
       "target": "llm_local_ollama_localollamaclient"
     },
     {
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "src/tara/llm/base.py",
+      "source_location": "L24",
+      "weight": 0.8,
+      "confidence_score": 0.5,
+      "source": "llm_base_llmclient",
+      "target": "llm_local_ollama_localollamaclient"
+    },
+    {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/tara/llm/base.py",
       "source_location": "L9",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_llm_base_py",
-      "target": "llm_base_llmclient",
-      "confidence_score": 1.0
+      "target": "llm_base_llmclient"
     },
     {
       "relation": "contains",
@@ -3201,9 +3201,9 @@
       "source_file": "src/tara/llm/base.py",
       "source_location": "L15",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_llm_base_py",
-      "target": "llm_base_get_client",
-      "confidence_score": 1.0
+      "target": "llm_base_get_client"
     },
     {
       "relation": "rationale_for",
@@ -3211,9 +3211,9 @@
       "source_file": "src/tara/llm/base.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "llm_base_rationale_1",
-      "target": "src_tara_llm_base_py",
-      "confidence_score": 1.0
+      "target": "src_tara_llm_base_py"
     },
     {
       "relation": "inherits",
@@ -3221,9 +3221,9 @@
       "source_file": "src/tara/llm/base.py",
       "source_location": "L9",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "llm_base_llmclient",
-      "target": "protocol",
-      "confidence_score": 1.0
+      "target": "protocol"
     },
     {
       "relation": "method",
@@ -3231,9 +3231,9 @@
       "source_file": "src/tara/llm/base.py",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "llm_base_llmclient",
-      "target": "llm_base_llmclient_complete",
-      "confidence_score": 1.0
+      "target": "llm_base_llmclient_complete"
     },
     {
       "relation": "rationale_for",
@@ -3241,9 +3241,9 @@
       "source_file": "src/tara/llm/base.py",
       "source_location": "L11",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "llm_base_rationale_11",
-      "target": "llm_base_llmclient_complete",
-      "confidence_score": 1.0
+      "target": "llm_base_llmclient_complete"
     },
     {
       "relation": "rationale_for",
@@ -3251,9 +3251,9 @@
       "source_file": "src/tara/llm/base.py",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "llm_base_rationale_16",
-      "target": "llm_base_get_client",
-      "confidence_score": 1.0
+      "target": "llm_base_get_client"
     },
     {
       "relation": "calls",
@@ -3272,9 +3272,9 @@
       "source_file": "src/tara/embeddings/embedder.py",
       "source_location": "L12",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_embeddings_embedder_py",
-      "target": "embeddings_embedder_model",
-      "confidence_score": 1.0
+      "target": "embeddings_embedder_model"
     },
     {
       "relation": "contains",
@@ -3282,9 +3282,9 @@
       "source_file": "src/tara/embeddings/embedder.py",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_embeddings_embedder_py",
-      "target": "embeddings_embedder_embed_texts",
-      "confidence_score": 1.0
+      "target": "embeddings_embedder_embed_texts"
     },
     {
       "relation": "contains",
@@ -3292,9 +3292,9 @@
       "source_file": "src/tara/embeddings/embedder.py",
       "source_location": "L20",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_embeddings_embedder_py",
-      "target": "embeddings_embedder_embed_query",
-      "confidence_score": 1.0
+      "target": "embeddings_embedder_embed_query"
     },
     {
       "relation": "rationale_for",
@@ -3302,9 +3302,9 @@
       "source_file": "src/tara/embeddings/embedder.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "embeddings_embedder_rationale_1",
-      "target": "src_tara_embeddings_embedder_py",
-      "confidence_score": 1.0
+      "target": "src_tara_embeddings_embedder_py"
     },
     {
       "relation": "calls",
@@ -3313,9 +3313,9 @@
       "source_file": "src/tara/embeddings/embedder.py",
       "source_location": "L17",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "embeddings_embedder_embed_texts",
-      "target": "embeddings_embedder_model",
-      "confidence_score": 1.0
+      "target": "embeddings_embedder_model"
     },
     {
       "relation": "calls",
@@ -3324,9 +3324,9 @@
       "source_file": "src/tara/embeddings/embedder.py",
       "source_location": "L21",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "embeddings_embedder_embed_query",
-      "target": "embeddings_embedder_embed_texts",
-      "confidence_score": 1.0
+      "target": "embeddings_embedder_embed_texts"
     },
     {
       "relation": "calls",
@@ -3345,9 +3345,9 @@
       "source_file": "src/tara/storage/db.py",
       "source_location": "L12",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_storage_db_py",
-      "target": "storage_db_connect",
-      "confidence_score": 1.0
+      "target": "storage_db_connect"
     },
     {
       "relation": "contains",
@@ -3355,9 +3355,9 @@
       "source_file": "src/tara/storage/db.py",
       "source_location": "L53",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_storage_db_py",
-      "target": "storage_db_init_schema",
-      "confidence_score": 1.0
+      "target": "storage_db_init_schema"
     },
     {
       "relation": "rationale_for",
@@ -3365,9 +3365,9 @@
       "source_file": "src/tara/storage/db.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "storage_db_rationale_1",
-      "target": "src_tara_storage_db_py",
-      "confidence_score": 1.0
+      "target": "src_tara_storage_db_py"
     },
     {
       "relation": "rationale_for",
@@ -3375,9 +3375,9 @@
       "source_file": "src/tara/storage/db.py",
       "source_location": "L14",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "storage_db_rationale_14",
-      "target": "src_tara_storage_db_py",
-      "confidence_score": 1.0
+      "target": "src_tara_storage_db_py"
     },
     {
       "relation": "calls",
@@ -3386,9 +3386,9 @@
       "source_file": "src/tara/storage/db.py",
       "source_location": "L54",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "storage_db_init_schema",
-      "target": "storage_db_connect",
-      "confidence_score": 1.0
+      "target": "storage_db_connect"
     },
     {
       "relation": "contains",
@@ -3396,9 +3396,9 @@
       "source_file": "src/tara/storage/vector.py",
       "source_location": "L11",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_storage_vector_py",
-      "target": "storage_vector_load_vec",
-      "confidence_score": 1.0
+      "target": "storage_vector_load_vec"
     },
     {
       "relation": "contains",
@@ -3406,9 +3406,9 @@
       "source_file": "src/tara/storage/vector.py",
       "source_location": "L17",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_storage_vector_py",
-      "target": "storage_vector_init_vector_table",
-      "confidence_score": 1.0
+      "target": "storage_vector_init_vector_table"
     },
     {
       "relation": "contains",
@@ -3416,9 +3416,9 @@
       "source_file": "src/tara/storage/vector.py",
       "source_location": "L27",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_storage_vector_py",
-      "target": "storage_vector_add",
-      "confidence_score": 1.0
+      "target": "storage_vector_add"
     },
     {
       "relation": "contains",
@@ -3426,9 +3426,9 @@
       "source_file": "src/tara/storage/vector.py",
       "source_location": "L32",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_storage_vector_py",
-      "target": "storage_vector_search",
-      "confidence_score": 1.0
+      "target": "storage_vector_search"
     },
     {
       "relation": "rationale_for",
@@ -3436,9 +3436,9 @@
       "source_file": "src/tara/storage/vector.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "storage_vector_rationale_1",
-      "target": "src_tara_storage_vector_py",
-      "confidence_score": 1.0
+      "target": "src_tara_storage_vector_py"
     },
     {
       "relation": "calls",
@@ -3447,9 +3447,9 @@
       "source_file": "src/tara/storage/vector.py",
       "source_location": "L18",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "storage_vector_init_vector_table",
-      "target": "storage_vector_load_vec",
-      "confidence_score": 1.0
+      "target": "storage_vector_load_vec"
     },
     {
       "relation": "rationale_for",
@@ -3457,9 +3457,9 @@
       "source_file": "src/tara/storage/vector.py",
       "source_location": "L28",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "storage_vector_rationale_28",
-      "target": "storage_vector_add",
-      "confidence_score": 1.0
+      "target": "storage_vector_add"
     },
     {
       "relation": "rationale_for",
@@ -3467,9 +3467,9 @@
       "source_file": "src/tara/storage/vector.py",
       "source_location": "L34",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "storage_vector_rationale_34",
-      "target": "storage_vector_search",
-      "confidence_score": 1.0
+      "target": "storage_vector_search"
     },
     {
       "relation": "contains",
@@ -3477,9 +3477,9 @@
       "source_file": "src/tara/storage/models.py",
       "source_location": "L17",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_storage_models_py",
-      "target": "storage_models_document",
-      "confidence_score": 1.0
+      "target": "storage_models_document"
     },
     {
       "relation": "contains",
@@ -3487,9 +3487,9 @@
       "source_file": "src/tara/storage/models.py",
       "source_location": "L26",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_storage_models_py",
-      "target": "storage_models_chunk",
-      "confidence_score": 1.0
+      "target": "storage_models_chunk"
     },
     {
       "relation": "contains",
@@ -3497,9 +3497,9 @@
       "source_file": "src/tara/storage/models.py",
       "source_location": "L37",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_storage_models_py",
-      "target": "storage_models_citation",
-      "confidence_score": 1.0
+      "target": "storage_models_citation"
     },
     {
       "relation": "rationale_for",
@@ -3507,9 +3507,9 @@
       "source_file": "src/tara/storage/models.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "storage_models_rationale_1",
-      "target": "src_tara_storage_models_py",
-      "confidence_score": 1.0
+      "target": "src_tara_storage_models_py"
     },
     {
       "relation": "uses",
@@ -3517,9 +3517,9 @@
       "source_file": "src/tara/retrieval/retriever.py",
       "source_location": "L10",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "retrieval_retriever_retrievedchunk",
-      "target": "storage_models_chunk",
-      "confidence_score": 0.5
+      "target": "storage_models_chunk"
     },
     {
       "relation": "rationale_for",
@@ -3527,9 +3527,9 @@
       "source_file": "src/tara/storage/models.py",
       "source_location": "L38",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "storage_models_rationale_38",
-      "target": "storage_models_citation",
-      "confidence_score": 1.0
+      "target": "storage_models_citation"
     },
     {
       "relation": "uses",
@@ -3537,9 +3537,9 @@
       "source_file": "src/tara/answering/answerer.py",
       "source_location": "L15",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "answering_answerer_answer",
-      "target": "storage_models_citation",
-      "confidence_score": 0.5
+      "target": "storage_models_citation"
     },
     {
       "relation": "contains",
@@ -3547,9 +3547,9 @@
       "source_file": "src/tara/storage/blobs.py",
       "source_location": "L11",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_storage_blobs_py",
-      "target": "storage_blobs_save",
-      "confidence_score": 1.0
+      "target": "storage_blobs_save"
     },
     {
       "relation": "contains",
@@ -3557,9 +3557,9 @@
       "source_file": "src/tara/storage/blobs.py",
       "source_location": "L17",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_storage_blobs_py",
-      "target": "storage_blobs_load",
-      "confidence_score": 1.0
+      "target": "storage_blobs_load"
     },
     {
       "relation": "rationale_for",
@@ -3567,9 +3567,9 @@
       "source_file": "src/tara/storage/blobs.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "storage_blobs_rationale_1",
-      "target": "src_tara_storage_blobs_py",
-      "confidence_score": 1.0
+      "target": "src_tara_storage_blobs_py"
     },
     {
       "relation": "contains",
@@ -3577,9 +3577,9 @@
       "source_file": "src/tara/safety/triage.py",
       "source_location": "L19",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_safety_triage_py",
-      "target": "safety_triage_triageresult",
-      "confidence_score": 1.0
+      "target": "safety_triage_triageresult"
     },
     {
       "relation": "contains",
@@ -3587,9 +3587,9 @@
       "source_file": "src/tara/safety/triage.py",
       "source_location": "L24",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_safety_triage_py",
-      "target": "safety_triage_screen",
-      "confidence_score": 1.0
+      "target": "safety_triage_screen"
     },
     {
       "relation": "rationale_for",
@@ -3597,9 +3597,9 @@
       "source_file": "src/tara/safety/triage.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "safety_triage_rationale_1",
-      "target": "src_tara_safety_triage_py",
-      "confidence_score": 1.0
+      "target": "src_tara_safety_triage_py"
     },
     {
       "relation": "rationale_for",
@@ -3607,9 +3607,9 @@
       "source_file": "src/tara/safety/triage.py",
       "source_location": "L25",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "safety_triage_rationale_25",
-      "target": "safety_triage_screen",
-      "confidence_score": 1.0
+      "target": "safety_triage_screen"
     },
     {
       "relation": "calls",
@@ -3628,9 +3628,9 @@
       "source_file": "src/tara/safety/framing.py",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_safety_framing_py",
-      "target": "safety_framing_apply_framing",
-      "confidence_score": 1.0
+      "target": "safety_framing_apply_framing"
     },
     {
       "relation": "rationale_for",
@@ -3638,9 +3638,9 @@
       "source_file": "src/tara/safety/framing.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "safety_framing_rationale_1",
-      "target": "src_tara_safety_framing_py",
-      "confidence_score": 1.0
+      "target": "src_tara_safety_framing_py"
     },
     {
       "relation": "rationale_for",
@@ -3648,9 +3648,9 @@
       "source_file": "src/tara/safety/framing.py",
       "source_location": "L9",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "safety_framing_rationale_9",
-      "target": "safety_framing_apply_framing",
-      "confidence_score": 1.0
+      "target": "safety_framing_apply_framing"
     },
     {
       "relation": "calls",
@@ -3669,9 +3669,9 @@
       "source_file": "src/tara/retrieval/retriever.py",
       "source_location": "L14",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_retrieval_retriever_py",
-      "target": "retrieval_retriever_retrievedchunk",
-      "confidence_score": 1.0
+      "target": "retrieval_retriever_retrievedchunk"
     },
     {
       "relation": "contains",
@@ -3679,9 +3679,9 @@
       "source_file": "src/tara/retrieval/retriever.py",
       "source_location": "L20",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_retrieval_retriever_py",
-      "target": "retrieval_retriever_retrieve",
-      "confidence_score": 1.0
+      "target": "retrieval_retriever_retrieve"
     },
     {
       "relation": "rationale_for",
@@ -3689,9 +3689,9 @@
       "source_file": "src/tara/retrieval/retriever.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "retrieval_retriever_rationale_1",
-      "target": "src_tara_retrieval_retriever_py",
-      "confidence_score": 1.0
+      "target": "src_tara_retrieval_retriever_py"
     },
     {
       "relation": "rationale_for",
@@ -3699,9 +3699,9 @@
       "source_file": "src/tara/retrieval/retriever.py",
       "source_location": "L23",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "retrieval_retriever_rationale_23",
-      "target": "src_tara_retrieval_retriever_py",
-      "confidence_score": 1.0
+      "target": "src_tara_retrieval_retriever_py"
     },
     {
       "relation": "calls",
@@ -3720,9 +3720,9 @@
       "source_file": "src/tara/answering/prompts.py",
       "source_location": "L13",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_answering_prompts_py",
-      "target": "answering_prompts_build_user_prompt",
-      "confidence_score": 1.0
+      "target": "answering_prompts_build_user_prompt"
     },
     {
       "relation": "rationale_for",
@@ -3730,9 +3730,9 @@
       "source_file": "src/tara/answering/prompts.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "answering_prompts_rationale_1",
-      "target": "src_tara_answering_prompts_py",
-      "confidence_score": 1.0
+      "target": "src_tara_answering_prompts_py"
     },
     {
       "relation": "rationale_for",
@@ -3740,9 +3740,9 @@
       "source_file": "src/tara/answering/prompts.py",
       "source_location": "L14",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "answering_prompts_rationale_14",
-      "target": "answering_prompts_build_user_prompt",
-      "confidence_score": 1.0
+      "target": "answering_prompts_build_user_prompt"
     },
     {
       "relation": "calls",
@@ -3761,9 +3761,9 @@
       "source_file": "src/tara/answering/answerer.py",
       "source_location": "L19",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_answering_answerer_py",
-      "target": "answering_answerer_answer",
-      "confidence_score": 1.0
+      "target": "answering_answerer_answer"
     },
     {
       "relation": "contains",
@@ -3771,9 +3771,9 @@
       "source_file": "src/tara/answering/answerer.py",
       "source_location": "L25",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_answering_answerer_py",
-      "target": "answering_answerer_ask",
-      "confidence_score": 1.0
+      "target": "answering_answerer_ask"
     },
     {
       "relation": "contains",
@@ -3781,9 +3781,9 @@
       "source_file": "src/tara/answering/answerer.py",
       "source_location": "L49",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_tara_answering_answerer_py",
-      "target": "answering_answerer_extract_citations",
-      "confidence_score": 1.0
+      "target": "answering_answerer_extract_citations"
     },
     {
       "relation": "rationale_for",
@@ -3791,9 +3791,9 @@
       "source_file": "src/tara/answering/answerer.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "answering_answerer_rationale_1",
-      "target": "src_tara_answering_answerer_py",
-      "confidence_score": 1.0
+      "target": "src_tara_answering_answerer_py"
     },
     {
       "relation": "calls",
@@ -3802,9 +3802,9 @@
       "source_file": "src/tara/answering/answerer.py",
       "source_location": "L29",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "answering_answerer_ask",
-      "target": "answering_answerer_answer",
-      "confidence_score": 1.0
+      "target": "answering_answerer_answer"
     },
     {
       "relation": "calls",
@@ -3813,9 +3813,9 @@
       "source_file": "src/tara/answering/answerer.py",
       "source_location": "L45",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "answering_answerer_ask",
-      "target": "answering_answerer_extract_citations",
-      "confidence_score": 1.0
+      "target": "answering_answerer_extract_citations"
     },
     {
       "relation": "rationale_for",
@@ -3823,9 +3823,9 @@
       "source_file": "src/tara/answering/answerer.py",
       "source_location": "L50",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "answering_answerer_rationale_50",
-      "target": "answering_answerer_extract_citations",
-      "confidence_score": 1.0
+      "target": "answering_answerer_extract_citations"
     },
     {
       "relation": "references",
@@ -4807,5 +4807,5 @@
       "source_file": "tests/eval_harness.py"
     }
   ],
-  "built_at_commit": "87223f47e34964bb5dd90642f2f7d0c7187d9d47"
+  "built_at_commit": "1b6fb17c14fd7ca22a7cd3b54424111c53c7912b"
 }
