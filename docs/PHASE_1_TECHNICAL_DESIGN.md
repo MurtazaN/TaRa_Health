@@ -1,12 +1,13 @@
 # TaRa Health — Phase 1 Technical Design
 
 **Phase 1 scope:** Grounded, read-only Q&A over the user's documents.
-**Explicitly out of scope for Phase 1:** any agentic *action* (no calendar, email, pharmacy, delivery).
-Phase 1 builds the foundation — ingestion, retrieval, grounded answering, citations, and the safety layer - that every later phase
+**Explicitly out of scope for Phase 1:** any agentic *action* (no calendar, email,
+pharmacy, delivery). Phase 1 builds the foundation — ingestion, retrieval,
+grounded answering, citations, and the safety layer — that every later phase
 depends on.
 
 **Status:** Draft v0.1
-**Last updated:** 14 June 2026
+**Last updated:** [Date]
 
 ---
 

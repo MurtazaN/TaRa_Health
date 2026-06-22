@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TaRa Health</title>
+</head>
+<body>
+  <!-- Placeholder chat UI for Phase 1. Replace with a real frontend later;
+       wrap in Tauri only if/when this productizes. -->
+  <h1>TaRa Health</h1>
+  <p>Upload a document, then ask Tara a question.</p>
+
+  <input type="file" id="file" />
+  <button id="uploadBtn">Upload</button>
+
+  <hr />
+
+  <input type="text" id="q" placeholder="Ask about your coverage, costs, or a symptom..." size="60" />
+  <button id="askBtn">Ask</button>
+
+  <pre id="out"></pre>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
