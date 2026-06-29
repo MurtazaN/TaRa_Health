@@ -54,60 +54,59 @@ Pre-check-before-answering hard short-circuit; safety as a separate testable mod
 
 ## Part B — Phase 2–4 Documentation Plan
 
-Source of truth for phasing is **PRD §11**. Each new doc mirrors the structure of
-`PHASE_1_TECHNICAL_DESIGN.md` (Goals → Architecture → Components → Data-model deltas →
-Flows → Safety → Privacy/Security → Testing → Excludes → Build order → Repo-layout deltas)
-so they read as one coherent series. **DRY:** the orchestrator, tool protocol, confirmation
-gate, action audit, and secrets/token storage are introduced *once* in a shared foundations
-doc and referenced by Phases 2–4 rather than re-specified.
+Source of truth for phasing is **PRD §11**. **One self-contained doc per phase** — each
+`PHASE_N_TECHNICAL_DESIGN.md` is followable on its own when implementing that phase, with no
+flipping between files. They mirror the structure of `PHASE_1_TECHNICAL_DESIGN.md` (Goals →
+Architecture → Components → Data-model deltas → Flows → Safety → Privacy/Security → Testing →
+Excludes → Build order → Repo-layout deltas) so the series reads coherently. The agent
+foundations (orchestrator, tool protocol, confirmation gate, action audit, secrets) are
+introduced **inside the Phase 2 doc** — Phase 2 is the first actions phase, so that is their
+natural home; Phases 3 and 4 open with a short "Builds on" recap pointing at those sections
+but otherwise stand alone for their own scope. **No separate shared foundations doc.**
 
-### Docs to author (execution phase)
+### Docs to author (execution phase) — separate doc per phase
 
-1. **`docs/AGENT_ARCHITECTURE.md`** — *Phase 2+ foundations, shared.*
-   The seam Phase 1 deliberately omits. Contents:
-   - **Orchestrator / planner loop** (`perceive → plan → confirm → act → observe`) — how a request decomposes into steps and selects tools; where it sits relative to the Phase 1 answerer (the planner *wraps* answering+retrieval, doesn't replace them).
+1. **`docs/PHASE_2_TECHNICAL_DESIGN.md`** — *First actions: Calendar + Reminders (self-contained).*
+   This doc also introduces the agent foundations that later phases reuse:
+   - **Orchestrator / planner loop** (`perceive → plan → confirm → act → observe`) — how a request decomposes into steps and selects tools; the planner *wraps* the Phase 1 answering+retrieval, doesn't replace them.
    - **Tool protocol** — a `Tool` abstraction analogous to the `LLMClient` protocol seam (name, JSON schema, `execute()`, dry-run/preview). Local-vs-remote (MCP) is a config decision, mirroring Phase 1's local/hosted switch.
-   - **Confirmation gate** — hard gate before any external/financial effect; preview→explicit "yes"→execute; nothing consequential without confirmation (PRD §6.3, §9).
-   - **Action audit + idempotency** — every action logged & user-viewable (PRD §8); idempotency keys so no double-book/order/refill; extends the Phase 1 `queries` audit table into an `actions` table.
+   - **Confirmation gate** — hard gate before any external/financial effect; preview → explicit "yes" → execute; nothing consequential without confirmation (PRD §6.3, §9).
+   - **Action audit + idempotency** — every action logged & user-viewable (PRD §8); idempotency keys so no double-book; extends the Phase 1 `queries` audit into an `actions` table.
    - **Secrets / OAuth token storage** — encrypted, on-device; reuses the `TARA_DB_KEY` encryption decision (ties back to V7).
    - **Safety interaction** — actions run *after* the Phase 1 safety pre-check; emergencies still short-circuit before any planning.
+   - **Phase 2 scope:** Google Calendar **official MCP server** (OAuth2) as the first `Tool`; Apple Reminders / local notifications (device-bound, no universal cloud API). First end-to-end action flow through the confirmation gate (UC-3). Testing: gate enforcement, idempotency (no double event), OAuth failure handling.
 
-2. **`docs/PHASE_2_TECHNICAL_DESIGN.md`** — *First actions: Calendar + Reminders.*
-   Lowest-risk (no money, no PHI egress beyond event text). Google Calendar **official MCP server** (OAuth2) as the first `Tool` implementation; Apple Reminders / local notifications (device-bound, no universal cloud API). Defines the first end-to-end action flow through the confirmation gate (UC-3). Data-model delta: `actions` table, OAuth token store. Testing: confirmation-gate enforcement, idempotency (no double event), OAuth failure handling.
+2. **`docs/PHASE_3_TECHNICAL_DESIGN.md`** — *External actions: email, delivery, pharmacy (self-contained).*
+   Opens with a "Builds on Phase 2" recap (orchestrator, tool protocol, confirmation gate, audit). Scope: Gmail draft+send (insurer/provider email, UC-2); Instacart IDP (**assisted handoff** — API returns a checkout link, doesn't place orders); CVS/Walgreens refill (gated, OAuth2, UC-6). Establishes the **assisted-handoff pattern** ("Tara prepares it, you confirm on their site") as the default for gated/financial APIs. Heightened confirmation for financial actions; secret-management hardening. Carries OPEN_QUESTIONS #3/#4 as decisions-to-make.
 
-3. **`docs/PHASE_3_TECHNICAL_DESIGN.md`** — *External actions: email, delivery, pharmacy.*
-   Gmail draft+send (insurer/provider email, UC-2); Instacart IDP (**assisted handoff** — API returns a checkout link, doesn't place orders); CVS/Walgreens refill (gated, OAuth2, UC-6). Establish the **assisted-handoff pattern** ("Tara prepares it, you confirm on their site") as the default for gated/financial APIs. Heightened confirmation for financial actions; secret-management hardening. Carries OPEN_QUESTIONS #2/#3/#4 as decisions-to-make.
+3. **`docs/PHASE_4_TECHNICAL_DESIGN.md`** — *Health portal + proactive (self-contained).*
+   Opens with a "Builds on Phase 2/3" recap. Scope: Epic on FHIR / SMART on FHIR (OAuth2 patient auth) — **read (USCDI) first, scheduling write-back later** (OPEN_QUESTIONS #2; production needs Epic app review). Proactive prep & follow-ups — the first time Tara acts unprompted, so a new safety/consent surface (deterministic disclaimer, opt-in). Note read FHIR data may re-enter the Phase 1 ingestion/retrieval pipeline.
 
-4. **`docs/PHASE_4_TECHNICAL_DESIGN.md`** — *Health portal + proactive.*
-   Epic on FHIR / SMART on FHIR (OAuth2 patient auth) — **read (USCDI) first, scheduling write-back later** (OPEN_QUESTIONS #2; production needs Epic app review). Proactive prep & follow-ups — the first time Tara acts unprompted, so a new safety/consent surface (deterministic disclaimer, opt-in). Note read FHIR data may re-enter the Phase 1 ingestion/retrieval pipeline.
+4. **Update `docs/PHASE_1_TECHNICAL_DESIGN.md`** — apply the Part A revision pass (V1–V19), bump to v0.3, and add a forward-reference to `PHASE_2_TECHNICAL_DESIGN.md` for the action seam.
 
-5. **Update `docs/PHASE_1_TECHNICAL_DESIGN.md`** — apply the Part A revision pass (V1–V19), bump to v0.3, and add a forward-reference to `AGENT_ARCHITECTURE.md` for the action seam.
-
-6. **Update cross-references** — `docs/PRD.md` §11 links each phase to its new doc; `docs/OPEN_QUESTIONS.md` #2–#4 point at the phase doc that will resolve them; `CLAUDE.md` "What this is" notes the phase-doc series exists.
+5. **Update cross-references** — `docs/PRD.md` §11 links each phase to its new doc; `docs/OPEN_QUESTIONS.md` #2–#4 point at the phase doc that will resolve them; `CLAUDE.md` "What this is" notes the phase-doc series exists.
 
 ---
 
 ## Implementation Steps (for `/ccg:execute` or a follow-up session)
 
 1. **Revise `PHASE_1_TECHNICAL_DESIGN.md`** per V1–V19 — *deliverable:* design doc v0.3 with safety taxonomy/decision-rule (V1), Citation provenance (V2), embed-dim validation (V3), ingest transactionality (V4), purge contract (V5), retrieval-filter contract (V6), encryption reconciliation (V7), framing order (V8), audit writer (V9), and the V10–V19 clarifications folded into the relevant sections. Update stub docstring contracts where a contract changed.
-2. **Author `docs/AGENT_ARCHITECTURE.md`** — *deliverable:* shared Phase 2+ foundations (orchestrator, tool protocol, confirmation gate, action audit/idempotency, secrets).
-3. **Author `docs/PHASE_2_TECHNICAL_DESIGN.md`** — *deliverable:* calendar+reminders design referencing doc #2.
-4. **Author `docs/PHASE_3_TECHNICAL_DESIGN.md`** — *deliverable:* email/delivery/pharmacy with the assisted-handoff pattern.
-5. **Author `docs/PHASE_4_TECHNICAL_DESIGN.md`** — *deliverable:* Epic FHIR + proactive, with the new consent/safety surface.
-6. **Wire cross-references** — *deliverable:* PRD §11, OPEN_QUESTIONS, CLAUDE.md updated; consistent v-numbers and "Last updated".
+2. **Author `docs/PHASE_2_TECHNICAL_DESIGN.md`** — *deliverable:* self-contained calendar+reminders design that also introduces the reusable agent foundations (orchestrator, tool protocol, confirmation gate, action audit/idempotency, secrets).
+3. **Author `docs/PHASE_3_TECHNICAL_DESIGN.md`** — *deliverable:* self-contained email/delivery/pharmacy design with the assisted-handoff pattern; opens with a "Builds on Phase 2" recap.
+4. **Author `docs/PHASE_4_TECHNICAL_DESIGN.md`** — *deliverable:* self-contained Epic FHIR + proactive design with the new consent/safety surface; opens with a "Builds on Phase 2/3" recap.
+5. **Wire cross-references** — *deliverable:* PRD §11, OPEN_QUESTIONS, CLAUDE.md updated; consistent v-numbers and "Last updated".
 
-> Steps 2–5 have no code dependency and can be written in parallel; step 1 is independent of 2–5;
-> step 6 runs last. Suggested sequence for a single writer: 1 → 2 → (3,4,5) → 6.
+> Step 1 is independent of 2–4. Phase 3 and 4 each reference Phase 2's foundation sections, so
+> for consistency write them in order. Step 5 runs last. Suggested sequence: 1 → 2 → 3 → 4 → 5.
 
 ## Key Files
 
 | File | Operation | Description |
 |------|-----------|-------------|
 | docs/PHASE_1_TECHNICAL_DESIGN.md | Modify | Apply V1–V19 revision pass; v0.3 |
-| docs/AGENT_ARCHITECTURE.md | Create | Shared Phase 2+ foundations (orchestrator, tools, confirmation gate, audit, secrets) |
-| docs/PHASE_2_TECHNICAL_DESIGN.md | Create | Calendar + reminders (first actions) |
-| docs/PHASE_3_TECHNICAL_DESIGN.md | Create | Email, delivery, pharmacy (assisted handoff) |
-| docs/PHASE_4_TECHNICAL_DESIGN.md | Create | Epic FHIR + proactive |
+| docs/PHASE_2_TECHNICAL_DESIGN.md | Create | Calendar + reminders (first actions) — also introduces the reusable agent foundations |
+| docs/PHASE_3_TECHNICAL_DESIGN.md | Create | Email, delivery, pharmacy (assisted handoff) — self-contained |
+| docs/PHASE_4_TECHNICAL_DESIGN.md | Create | Epic FHIR + proactive — self-contained |
 | docs/PRD.md | Modify | §11 links to phase docs |
 | docs/OPEN_QUESTIONS.md | Modify | Point #2–#4 at owning phase docs |
 | CLAUDE.md | Modify | Note phase-doc series |
@@ -117,7 +116,7 @@ doc and referenced by Phases 2–4 rather than re-specified.
 | Risk | Mitigation |
 |------|------------|
 | Phase 2–4 docs over-specify before requirements firm up (YAGNI) | Keep them at the same "settled boundaries, open empirics" altitude as the Phase 1 doc; push unresolved choices to OPEN_QUESTIONS, not into the design. |
-| Orchestrator/tool seam re-specified per phase (DRY violation) | Single `AGENT_ARCHITECTURE.md`; phase docs reference it. |
+| Agent foundations duplicated across self-contained phase docs | Foundations are specified *once* in the Phase 2 doc; Phase 3/4 give a short "Builds on" recap + a link, not a re-spec — self-contained for their deltas without copy-paste drift. |
 | Phase 1 revision changes stub contracts the scaffold relies on | Treat V1–V19 as doc + docstring changes only; no behavior implemented yet, so nothing to break. Flag any contract change explicitly in the stub docstring. |
 | Doc-only multi-plan misread as license to implement code | This plan is documentation; production code stays untouched until a separate, explicit request. |
 

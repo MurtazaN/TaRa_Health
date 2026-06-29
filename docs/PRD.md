@@ -173,11 +173,11 @@ action and hands the user a link/draft) before becoming fully automated.
 
 **Phase 1 — Grounded Q&A (read-only).** Upload, parse, RAG, cite. No actions. Safety layer in place. *(See PHASE_1_TECHNICAL_DESIGN.md.)*
 
-**Phase 2 — First actions.** Calendar + reminders (lowest-risk, no money/PHI leaving the system; calendar has an official MCP server).
+**Phase 2 — First actions.** Calendar + reminders (lowest-risk, no money/PHI leaving the system; calendar has an official MCP server). *(See [PHASE_2_TECHNICAL_DESIGN.md](PHASE_2_TECHNICAL_DESIGN.md) — also defines the shared orchestrator/tool/confirmation-gate foundations.)*
 
-**Phase 3 — External actions.** Insurance email drafting, delivery/commerce, pharmacy refills — all behind the confirmation gate, starting as assisted handoffs.
+**Phase 3 — External actions.** Insurance email drafting, delivery/commerce, pharmacy refills — all behind the confirmation gate, starting as assisted handoffs. *(See [PHASE_3_TECHNICAL_DESIGN.md](PHASE_3_TECHNICAL_DESIGN.md).)*
 
-**Phase 4 — Health-portal & proactive help.** Epic on FHIR (read, then scheduling); proactive prep and follow-ups.
+**Phase 4 — Health-portal & proactive help.** Epic on FHIR (read, then scheduling); proactive prep and follow-ups. *(See [PHASE_4_TECHNICAL_DESIGN.md](PHASE_4_TECHNICAL_DESIGN.md).)*
 
 ---
 
