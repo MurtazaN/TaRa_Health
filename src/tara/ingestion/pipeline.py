@@ -1,33 +1,128 @@
-"""End-to-end ingestion: upload bytes -> stored, classified, chunked, embedded,
-and indexed locally. Returns the Document record.
+"""End-to-end ingestion: upload bytes -> stored, chunked, embedded, and indexed
+locally. Returns the Document record.
 
-    save blob -> extract (+page/char spans) -> classify -> chunk
-              -> embed -> write rows + vectors
+    validate -> dedup -> save blob -> extract(+spans) -> chunk -> embed
+             -> [txn: write documents + chunks] -> write vectors -> status=indexed
+
+Transactional + idempotent per §3.1f/§3.1g: same file re-ingested is a no-op
+(reject-as-duplicate); a mid-way failure never leaves the three stores
+inconsistent. Doc-type classification is deferred to Slice 6 (doc_type='other').
 """
 from __future__ import annotations
 
+import hashlib
+import sqlite3
 import uuid
-from pathlib import Path
+from datetime import datetime, timezone
 
-from tara.embeddings.embedder import embed_texts
+from tara.config import get_settings
+from tara.embeddings import embedder
 from tara.ingestion.chunk import chunk as chunk_spans
-from tara.ingestion.classify import classify
+from tara.ingestion.detect import validate_upload
 from tara.ingestion.extract import extract
-from tara.storage import blobs
+from tara.storage import blobs, db, vector
 from tara.storage.models import Document
+from tara.storage.purge import purge_document
 
 
-def ingest(filename: str, data: bytes) -> Document:
-    doc_id = uuid.uuid4().hex
-    path = blobs.save(doc_id, filename, data)
+class IngestionError(RuntimeError):
+    """Ingestion failed after validation (e.g. extraction produced no text)."""
 
-    spans = extract(path)
-    full_text = "\n".join(s.text for s in spans)
-    doc_type = classify(full_text)
-    chunks = chunk_spans(doc_id, spans)
 
-    _embeddings = embed_texts([c.text for c in chunks])  # noqa: F841
+def _row_to_document(row: sqlite3.Row) -> Document:
+    return Document(
+        doc_id=row["doc_id"],
+        filename=row["filename"],
+        doc_type=row["doc_type"],
+        content_hash=row["content_hash"],
+        status=row["status"],
+        page_count=row["page_count"],
+        uploaded_at=datetime.fromisoformat(row["uploaded_at"]),
+    )
 
-    # TODO: persist Document + chunks (storage.db) and embeddings (storage.vector),
-    #       then return the populated Document.
-    raise NotImplementedError
+
+def _find_indexed_by_hash(conn: sqlite3.Connection, content_hash: str) -> sqlite3.Row | None:
+    return conn.execute(
+        "SELECT * FROM documents WHERE content_hash = ? AND status = 'indexed'",
+        (content_hash,),
+    ).fetchone()
+
+
+def ingest(filename: str, data: bytes, *, replace: bool = False) -> Document:
+    settings = get_settings()
+    validate_upload(filename, len(data))
+    content_hash = hashlib.sha256(data).hexdigest()
+
+    conn = db.connect()
+    try:
+        vector.load(conn)
+        existing = _find_indexed_by_hash(conn, content_hash)
+        if existing is not None:
+            if not replace:
+                return _row_to_document(existing)  # idempotent: no duplicate (§3.1f)
+            purge_document(existing["doc_id"])
+
+        now = datetime.now(timezone.utc)
+        db.ensure_index_meta(conn, settings.embed_model, settings.embed_dim, now.isoformat())
+        vector.init_vector_table(conn)  # idempotent; commits
+
+        doc_id = uuid.uuid4().hex
+        path = blobs.save(doc_id, filename, data)
+        doc_committed = False
+        try:
+            spans = extract(path)
+            if not spans:
+                raise IngestionError(f"No extractable text in '{filename}'.")
+            chunks = chunk_spans(doc_id, spans)
+            vectors = embedder.embed_texts([c.text for c in chunks])
+            page_count = max(s.page for s in spans)
+
+            # One transaction: documents row + all chunks rows (status='indexing').
+            conn.execute(
+                "INSERT INTO documents (doc_id, filename, doc_type, content_hash, status, "
+                "page_count, uploaded_at) VALUES (?, ?, 'other', ?, 'indexing', ?, ?)",
+                (doc_id, filename, content_hash, page_count, now.isoformat()),
+            )
+            conn.executemany(
+                "INSERT INTO chunks (chunk_id, doc_id, page, char_start, char_end, text) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                [(c.chunk_id, c.doc_id, c.page, c.char_start, c.char_end, c.text) for c in chunks],
+            )
+            conn.commit()
+            doc_committed = True
+
+            vector.add_many(conn, list(zip((c.chunk_id for c in chunks), vectors)))
+            conn.execute("UPDATE documents SET status = 'indexed' WHERE doc_id = ?", (doc_id,))
+            conn.commit()
+
+            return Document(
+                doc_id=doc_id, filename=filename, doc_type="other",
+                content_hash=content_hash, status="indexed",
+                page_count=page_count, uploaded_at=now,
+            )
+        except Exception:
+            _cleanup_failed(conn, doc_id, doc_committed)
+            raise
+    finally:
+        conn.close()
+
+
+def _cleanup_failed(conn: sqlite3.Connection, doc_id: str, doc_committed: bool) -> None:
+    """Best-effort recovery so a failed ingest leaves no inconsistent state (§3.1g).
+    A committed doc is marked 'indexing_failed' (invisible to retrieval) with its
+    partial vectors removed; the orphan blob is always deleted."""
+    try:
+        conn.rollback()
+        chunk_ids = [
+            row["chunk_id"]
+            for row in conn.execute("SELECT chunk_id FROM chunks WHERE doc_id = ?", (doc_id,))
+        ]
+        vector.delete(conn, chunk_ids)
+        if doc_committed:
+            conn.execute(
+                "UPDATE documents SET status = 'indexing_failed' WHERE doc_id = ?", (doc_id,)
+            )
+        conn.commit()
+    except Exception:
+        pass  # never mask the original error
+    blobs.delete(doc_id)
