@@ -2,6 +2,8 @@
 page-bounded deterministic chunking, and the transactional/idempotent pipeline."""
 from __future__ import annotations
 
+import sqlite3
+
 import pytest
 
 from tara.ingestion.chunk import chunk
@@ -186,3 +188,113 @@ def test_failed_extraction_cleans_up_blob_and_leaves_no_indexed_doc(ingest_env, 
     finally:
         conn.close()
     assert not list(ingest_env.blob_dir.glob("*"))  # orphan blob removed
+
+
+# --- replace flow: no data loss on failure (CRITICAL fix) ---
+
+@pytest.mark.integration
+def test_replace_failure_preserves_prior_document(ingest_env, make_pdf, monkeypatch):
+    from tara.ingestion import pipeline
+
+    data = make_pdf([["Specialist copay is $40 per visit."]])
+    original = pipeline.ingest("policy.pdf", data)
+
+    # Re-index the same file, but embedding fails part-way through.
+    monkeypatch.setattr(pipeline.embedder, "embed_texts",
+                        lambda texts: (_ for _ in ()).throw(RuntimeError("embed down")))
+    with pytest.raises(RuntimeError, match="embed down"):
+        pipeline.ingest("policy.pdf", data, replace=True)
+
+    conn = connect()
+    try:
+        vector.load(conn)
+        row = conn.execute("SELECT status FROM documents WHERE doc_id=?", (original.doc_id,)).fetchone()
+        assert row is not None and row["status"] == "indexed"  # prior version intact
+        assert conn.execute("SELECT COUNT(*) FROM vec_chunks").fetchone()[0] > 0  # vectors kept
+    finally:
+        conn.close()
+
+
+@pytest.mark.integration
+def test_replace_reindexes_same_file(ingest_env, make_pdf):
+    from tara.ingestion.pipeline import ingest
+
+    data = make_pdf([["Specialist copay is $40 per visit."]])
+    first = ingest("policy.pdf", data)
+    second = ingest("policy.pdf", data, replace=True)
+
+    assert second.doc_id != first.doc_id  # re-indexed under a fresh id
+    conn = connect()
+    try:
+        assert conn.execute(
+            "SELECT COUNT(*) FROM documents WHERE status='indexed'"
+        ).fetchone()[0] == 1  # old purged, one indexed doc remains
+    finally:
+        conn.close()
+
+
+# --- dedup uniqueness (TOCTOU fix): schema constraint ---
+
+@pytest.mark.integration
+def test_content_hash_unique_among_indexed_only(ingest_env):
+    conn = connect()
+    try:
+        conn.execute(
+            "INSERT INTO documents (doc_id, filename, content_hash, status, uploaded_at) "
+            "VALUES ('a', 'a.pdf', 'HASH', 'indexed', '2026-01-01T00:00:00+00:00')"
+        )
+        conn.commit()
+        with pytest.raises(sqlite3.IntegrityError):
+            conn.execute(
+                "INSERT INTO documents (doc_id, filename, content_hash, status, uploaded_at) "
+                "VALUES ('b', 'b.pdf', 'HASH', 'indexed', '2026-01-01T00:00:00+00:00')"
+            )
+            conn.commit()
+        conn.rollback()
+        # Two *failed* attempts with the same hash are allowed (retry not blocked).
+        conn.execute(
+            "INSERT INTO documents (doc_id, filename, content_hash, status, uploaded_at) "
+            "VALUES ('c', 'c.pdf', 'H2', 'indexing_failed', '2026-01-01T00:00:00+00:00')"
+        )
+        conn.execute(
+            "INSERT INTO documents (doc_id, filename, content_hash, status, uploaded_at) "
+            "VALUES ('d', 'd.pdf', 'H2', 'indexing_failed', '2026-01-01T00:00:00+00:00')"
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+# --- security hardening: page cap + orphan-blob reconciliation ---
+
+@pytest.mark.unit
+def test_pdf_page_cap_rejects_oversized(make_pdf, tmp_path, monkeypatch):
+    from tara import config
+    from tara.ingestion.detect import UploadError, detect
+
+    monkeypatch.setenv("TARA_DATA_DIR", str(tmp_path / "d"))
+    monkeypatch.setenv("TARA_MAX_PDF_PAGES", "1")
+    config.get_settings.cache_clear()
+    try:
+        path = tmp_path / "multi.pdf"
+        path.write_bytes(make_pdf([["page one"], ["page two"]]))
+        with pytest.raises(UploadError, match="pages"):
+            detect(path)
+    finally:
+        config.get_settings.cache_clear()
+
+
+@pytest.mark.integration
+def test_reconcile_removes_orphan_blobs_only(ingest_env, make_pdf):
+    from tara.ingestion.pipeline import ingest
+    from tara.storage.purge import reconcile_orphan_blobs
+
+    doc = ingest("policy.pdf", make_pdf([["Specialist copay is $40 per visit."]]))
+    orphan = ingest_env.blob_dir / "deadbeefdeadbeef.pdf"
+    orphan.write_bytes(b"orphaned phi")
+
+    removed = reconcile_orphan_blobs()
+
+    assert "deadbeefdeadbeef" in removed
+    assert not orphan.exists()
+    assert list(ingest_env.blob_dir.glob(f"{doc.doc_id}.*"))  # real blob kept

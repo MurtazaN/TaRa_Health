@@ -4,9 +4,14 @@ locally. Returns the Document record.
     validate -> dedup -> save blob -> extract(+spans) -> chunk -> embed
              -> [txn: write documents + chunks] -> write vectors -> status=indexed
 
-Transactional + idempotent per §3.1f/§3.1g: same file re-ingested is a no-op
-(reject-as-duplicate); a mid-way failure never leaves the three stores
-inconsistent. Doc-type classification is deferred to Slice 6 (doc_type='other').
+Transactional + idempotent per §3.1f/§3.1g. Two guarantees worth calling out:
+  * The failure-prone steps (parse + network embedding) run BEFORE any store
+    mutation, so a failure never destroys an existing document — in particular a
+    `replace=True` re-index only purges the prior version once the new one is
+    validated (avoids unrecoverable data loss).
+  * A partial-unique index on content_hash makes the dedup check race-safe: a lost
+    race surfaces as IntegrityError and returns the winning document.
+Doc-type classification is deferred to Slice 6 (doc_type='other').
 """
 from __future__ import annotations
 
@@ -57,25 +62,29 @@ def ingest(filename: str, data: bytes, *, replace: bool = False) -> Document:
     try:
         vector.load(conn)
         existing = _find_indexed_by_hash(conn, content_hash)
-        if existing is not None:
-            if not replace:
-                return _row_to_document(existing)  # idempotent: no duplicate (§3.1f)
-            purge_document(existing["doc_id"])
+        if existing is not None and not replace:
+            return _row_to_document(existing)  # idempotent: no duplicate (§3.1f)
 
         now = datetime.now(timezone.utc)
         db.ensure_index_meta(conn, settings.embed_model, settings.embed_dim, now.isoformat())
         vector.init_vector_table(conn)  # idempotent; commits
+        conn.commit()
 
         doc_id = uuid.uuid4().hex
         path = blobs.save(doc_id, filename, data)
         doc_committed = False
         try:
+            # Failure-prone work first, before mutating any store (see module docstring).
             spans = extract(path)
             if not spans:
                 raise IngestionError(f"No extractable text in '{filename}'.")
             chunks = chunk_spans(doc_id, spans)
-            vectors = embedder.embed_texts([c.text for c in chunks])
+            vectors = embedder.embed_texts([c.text for c in chunks])  # asserts count
             page_count = max(s.page for s in spans)
+
+            # Only now is it safe to destroy the prior version (§3.1f replace path).
+            if replace and existing is not None:
+                purge_document(existing["doc_id"])
 
             # One transaction: documents row + all chunks rows (status='indexing').
             conn.execute(
@@ -92,8 +101,17 @@ def ingest(filename: str, data: bytes, *, replace: bool = False) -> Document:
             doc_committed = True
 
             vector.add_many(conn, list(zip((c.chunk_id for c in chunks), vectors)))
-            conn.execute("UPDATE documents SET status = 'indexed' WHERE doc_id = ?", (doc_id,))
-            conn.commit()
+            try:
+                conn.execute("UPDATE documents SET status = 'indexed' WHERE doc_id = ?", (doc_id,))
+                conn.commit()
+            except sqlite3.IntegrityError:
+                # Lost the dedup race: another ingest indexed this content first.
+                conn.rollback()
+                purge_document(doc_id)
+                winner = _find_indexed_by_hash(conn, content_hash)
+                if winner is None:
+                    raise
+                return _row_to_document(winner)
 
             return Document(
                 doc_id=doc_id, filename=filename, doc_type="other",
@@ -110,7 +128,8 @@ def ingest(filename: str, data: bytes, *, replace: bool = False) -> Document:
 def _cleanup_failed(conn: sqlite3.Connection, doc_id: str, doc_committed: bool) -> None:
     """Best-effort recovery so a failed ingest leaves no inconsistent state (§3.1g).
     A committed doc is marked 'indexing_failed' (invisible to retrieval) with its
-    partial vectors removed; the orphan blob is always deleted."""
+    partial vectors removed; the orphan blob is always deleted. Never masks the
+    original error."""
     try:
         conn.rollback()
         chunk_ids = [
@@ -124,5 +143,8 @@ def _cleanup_failed(conn: sqlite3.Connection, doc_id: str, doc_committed: bool) 
             )
         conn.commit()
     except Exception:
-        pass  # never mask the original error
-    blobs.delete(doc_id)
+        pass
+    try:
+        blobs.delete(doc_id)
+    except Exception:
+        pass

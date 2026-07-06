@@ -56,6 +56,11 @@ def detect(path: Path) -> SourceKind:
     suffix = path.suffix.lower()
     if suffix != ".pdf":
         return SourceKind.IMAGE
+    max_pages = get_settings().max_pdf_pages
     with pymupdf.open(path) as doc:
+        if doc.page_count > max_pages:
+            raise UploadError(
+                f"PDF has {doc.page_count} pages; the limit is {max_pages}."
+            )
         total_text = sum(len(page.get_text("text").strip()) for page in doc)
     return SourceKind.PDF_TEXT if total_text >= _MIN_TEXT_CHARS else SourceKind.PDF_SCAN

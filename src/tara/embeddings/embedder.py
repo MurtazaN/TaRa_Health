@@ -41,6 +41,12 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
     resp = _client().embeddings.create(model=s.embed_model, input=texts)
     # The API tags each vector with its input index; sort defensively.
     ordered = sorted(resp.data, key=lambda d: d.index)
+    if len(ordered) != len(texts):
+        # A partial batch would silently leave chunks un-vectorized (zip truncates
+        # downstream); fail loudly so the pipeline's cleanup path catches it.
+        raise RuntimeError(
+            f"Embedding endpoint returned {len(ordered)} vectors for {len(texts)} inputs."
+        )
     return [_normalize(list(d.embedding)) for d in ordered]
 
 

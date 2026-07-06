@@ -42,6 +42,12 @@ CREATE TABLE IF NOT EXISTS documents (
 -- Fast dedup lookups by content hash (§3.1f).
 CREATE INDEX IF NOT EXISTS idx_documents_hash ON documents(content_hash);
 
+-- At most one *indexed* document per content hash: closes the check-then-insert
+-- race that could otherwise persist duplicate indexed docs (§3.1f). Scoped to
+-- status='indexed' so a prior failed/in-flight attempt never blocks a retry.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_documents_hash_unique
+    ON documents(content_hash) WHERE status = 'indexed' AND content_hash != '';
+
 CREATE TABLE IF NOT EXISTS chunks (
     chunk_id    TEXT PRIMARY KEY,
     doc_id      TEXT NOT NULL REFERENCES documents(doc_id) ON DELETE CASCADE,

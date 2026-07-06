@@ -35,3 +35,28 @@ def purge_document(doc_id: str) -> bool:
     # NOTE: queries-row redaction (§7) is deferred until the audit log is written
     # (Slice 2+); the queries table has no doc linkage yet.
     return exists
+
+
+def reconcile_orphan_blobs() -> list[str]:
+    """Delete blob files with no owning `documents` row and return their doc_ids.
+
+    Makes "delete is complete" (§7) self-healing: if the process is killed after a
+    purge/failed-ingest commits but before the blob is unlinked, the leftover PHI
+    file is swept on the next startup. Idempotent."""
+    from tara.config import get_settings
+
+    conn = connect()
+    try:
+        known = {row["doc_id"] for row in conn.execute("SELECT doc_id FROM documents")}
+    finally:
+        conn.close()
+
+    removed: list[str] = []
+    for path in get_settings().blob_dir.glob("*"):
+        if not path.is_file():
+            continue
+        doc_id = path.stem
+        if doc_id not in known:
+            path.unlink(missing_ok=True)
+            removed.append(doc_id)
+    return removed

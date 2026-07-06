@@ -22,7 +22,7 @@ def _suffix(filename: str) -> str:
 
 def save(doc_id: str, filename: str, data: bytes) -> Path:
     blob_dir = get_settings().blob_dir
-    blob_dir.mkdir(parents=True, exist_ok=True)
+    blob_dir.mkdir(parents=True, exist_ok=True, mode=0o700)  # PHI on disk: owner-only
     path = blob_dir / f"{doc_id}{_suffix(filename)}"
     path.write_bytes(data)
     return path

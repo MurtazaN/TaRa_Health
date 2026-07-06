@@ -62,6 +62,9 @@ class Settings(BaseSettings):
 
     # ---- Upload limits (§3.1a) ----
     max_upload_bytes: int = _DEFAULT_MAX_UPLOAD_BYTES
+    # Page ceiling for PDF parsing: bounds CPU/memory on a pathological (but small)
+    # file, since documents may originate from a third party (insurer/provider).
+    max_pdf_pages: int = 1000
 
     # -- Derived paths --
     @property
@@ -110,8 +113,8 @@ def get_settings() -> Settings:
 
 
 def ensure_dirs(settings: Settings | None = None) -> None:
-    """Create the on-device storage directories. Call once at startup / before
-    first write. Idempotent."""
+    """Create the on-device storage directories, owner-only (PHI on disk). Call
+    once at startup / before first write. Idempotent."""
     s = settings or get_settings()
-    s.data_dir.mkdir(parents=True, exist_ok=True)
-    s.blob_dir.mkdir(parents=True, exist_ok=True)
+    for directory in (s.data_dir, s.blob_dir):
+        directory.mkdir(parents=True, exist_ok=True, mode=0o700)

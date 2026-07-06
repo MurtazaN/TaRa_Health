@@ -57,6 +57,19 @@ def test_embed_query_returns_single_vector(fake_client):
 
 
 @pytest.mark.unit
+def test_embed_texts_rejects_count_mismatch(monkeypatch):
+    class _ShortEmbeddings:
+        def create(self, model, input):  # noqa: A002
+            # Return fewer vectors than inputs -> must raise, not silently truncate.
+            return type("Resp", (), {"data": [_FakeEmbedding([1.0, 0.0, 0.0], 0)]})
+
+    monkeypatch.setattr(embedder, "_client",
+                        lambda: type("C", (), {"embeddings": _ShortEmbeddings()}))
+    with pytest.raises(RuntimeError, match="vectors"):
+        embedder.embed_texts(["a", "b"])
+
+
+@pytest.mark.unit
 def test_verify_dim_raises_on_mismatch(fake_client, monkeypatch):
     # Fake returns dim 3; configure a different expected dim.
     monkeypatch.setattr(embedder, "get_settings",
