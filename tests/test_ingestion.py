@@ -10,7 +10,7 @@ from tara.document_ingestion.text_chunking import chunk_spans
 from tara.document_ingestion.source_kind_detection import SourceKind, detect_source_kind
 from tara.document_ingestion.text_extraction import extract_text_spans, page_canonical_text
 from tara.local_data_stores import vector_index
-from tara.local_data_stores.metadata_db import connect_db
+from tara.local_data_stores.db_connection import connect_db
 from tara.app_errors import UploadError
 from tara.upload_validation import validate_upload
 

@@ -1,39 +1,43 @@
-"""Complete, buildable document deletion (design §3.2, §7).
+"""Deletes a document completely: its vectors, chunk rows, document row, and the
+original uploaded file. Implements the "delete is real and complete" contract of
+design §3.2/§7.
 
-Because vec_chunks has no foreign-key link to chunks, vector rows must be deleted
-explicitly. Ordering matters: remove vectors first, then the document row (whose
-ON DELETE CASCADE removes its chunks), then the blob — so a mid-way failure never
-leaves a "document gone but vectors remain" state.
+Deletion order is the one invariant this module protects. No foreign key reaches
+the vec_chunks table, so vector rows never cascade — they are deleted explicitly,
+and first. A crash mid-purge can therefore only leave rows that a retry removes,
+never orphaned vectors that keep surfacing search hits for a deleted document.
 """
 from __future__ import annotations
 
-from tara.local_data_stores import blob_store, vector_index
-from tara.local_data_stores.metadata_db import connect_db
+from tara.config import get_settings
+from tara.local_data_stores import blob_store, chunk_records, document_records, vector_index
+from tara.local_data_stores.db_connection import connect_db
 
 
 def purge_document(doc_id: str) -> bool:
-    """Delete a document's vectors, chunks, row, and blob. Returns False if the
-    document did not exist. Idempotent."""
+    """Delete every stored trace of one document. Returns False if the document
+    did not exist. Idempotent: purging an already-absent document is a no-op."""
     conn = connect_db()
     try:
         vector_index.load_vector_extension(conn)
-        chunk_ids = [
-            row["chunk_id"]
-            for row in conn.execute("SELECT chunk_id FROM chunks WHERE doc_id = ?", (doc_id,))
-        ]
-        document_existed = conn.execute(
-            "SELECT 1 FROM documents WHERE doc_id = ?", (doc_id,)
-        ).fetchone() is not None
+        chunk_ids = chunk_records.chunk_ids_for_document(conn, doc_id)
+        document_existed = document_records.document_row_exists(conn, doc_id)
 
-        vector_index.delete_embeddings(conn, chunk_ids)      # 1) vectors (no cascade)
-        conn.execute("DELETE FROM documents WHERE doc_id = ?", (doc_id,))  # 2) row -> cascades chunks
+        # Vectors first: nothing cascades to vec_chunks, so this is the only
+        # deletion that would dangle if the purge stopped part-way.
+        vector_index.delete_embeddings(conn, chunk_ids)
+        # Deleting the document row cascades to its chunk rows (foreign_keys ON).
+        document_records.delete_document_row(conn, doc_id)
         conn.commit()
     finally:
         conn.close()
 
-    blob_store.delete_blob(doc_id)  # 3) blob on disk
-    # NOTE: queries-row redaction (§7) is deferred until the audit log is written
-    # (Slice 2+); the queries table has no doc linkage yet.
+    # The file on disk is outside the transaction above. If the process dies
+    # before this line, reconcile_orphan_blobs() removes the leftover file on
+    # the next startup, so deletion still completes.
+    blob_store.delete_blob(doc_id)
+    # TODO (Slice 2+): redact this document's rows in the `queries` audit log
+    #       once answering starts writing it (§7 retention policy).
     return document_existed
 
 
@@ -43,11 +47,9 @@ def reconcile_orphan_blobs() -> list[str]:
     Makes "delete is complete" (§7) self-healing: if the process is killed after a
     purge/failed-ingest commits but before the blob is unlinked, the leftover PHI
     file is swept on the next startup. Idempotent."""
-    from tara.config import get_settings
-
     conn = connect_db()
     try:
-        known_doc_ids = {row["doc_id"] for row in conn.execute("SELECT doc_id FROM documents")}
+        known_doc_ids = document_records.all_doc_ids(conn)
     finally:
         conn.close()
 

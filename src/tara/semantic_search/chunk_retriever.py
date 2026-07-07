@@ -11,7 +11,8 @@ from dataclasses import dataclass
 from tara.app_errors import IndexMismatchError
 from tara.config import get_settings
 from tara.data_models import Chunk
-from tara.local_data_stores import metadata_db, vector_index
+from tara.local_data_stores import chunk_records, embedding_index_meta, vector_index
+from tara.local_data_stores.db_connection import connect_db
 from tara.semantic_search import text_embedder
 
 
@@ -30,7 +31,7 @@ def _l2_distance_to_cosine_similarity(l2_distance: float) -> float:
 def _is_index_ready(conn) -> bool:
     """True if the index is usable. Raises if the stored embed model/dim differs
     from config (stale index; §3.2). Returns False if nothing is indexed yet."""
-    stored_index_meta = metadata_db.read_index_meta(conn)
+    stored_index_meta = embedding_index_meta.read_index_meta(conn)
     if stored_index_meta is None:
         return False
     settings = get_settings()
@@ -44,7 +45,7 @@ def _is_index_ready(conn) -> bool:
 
 def retrieve_chunks(question: str, doc_type_hint: str | None = None) -> list[RetrievedChunk]:
     settings = get_settings()
-    conn = metadata_db.connect_db()
+    conn = connect_db()
     try:
         vector_index.load_vector_extension(conn)
         if not _is_index_ready(conn):
@@ -54,19 +55,12 @@ def retrieve_chunks(question: str, doc_type_hint: str | None = None) -> list[Ret
         nearest_hits = vector_index.find_nearest_chunks(conn, question_embedding, settings.top_k)
         results: list[RetrievedChunk] = []
         for chunk_id, distance in nearest_hits:
-            row = conn.execute(
-                "SELECT c.doc_id, c.page, c.char_start, c.char_end, c.text, d.filename, d.status "
-                "FROM chunks c JOIN documents d ON c.doc_id = d.doc_id WHERE c.chunk_id = ?",
-                (chunk_id,),
-            ).fetchone()
-            if row is None or row["status"] != "indexed":
+            chunk_with_source = chunk_records.fetch_chunk_with_filename(conn, chunk_id)
+            if chunk_with_source is None or chunk_with_source.document_status != "indexed":
                 continue  # only indexed documents are visible to retrieval (§3.1g)
             results.append(RetrievedChunk(
-                chunk=Chunk(
-                    chunk_id=chunk_id, doc_id=row["doc_id"], page=row["page"],
-                    char_start=row["char_start"], char_end=row["char_end"], text=row["text"],
-                ),
-                filename=row["filename"],
+                chunk=chunk_with_source.chunk,
+                filename=chunk_with_source.source_filename,
                 score=_l2_distance_to_cosine_similarity(distance),
             ))
     finally:

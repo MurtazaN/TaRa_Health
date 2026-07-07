@@ -497,7 +497,9 @@ tara-health/
 │   ├── question_answering/      # answer prompts + question answerer — full query flow incl. numeric grounding (§5.2, §6)
 │   │  # -- planes: what every capability stands on --
 │   ├── llm_clients/             # model plane: LLMClient interface + ollama/openai-compatible/hosted clients (§3.5)
-│   ├── local_data_stores/       # state plane: metadata_db + vector_index + blob_store + document_purge, SQLCipher-ready (§3.2)
+│   ├── local_data_stores/       # state plane (§3.2): db_connection + db_schema + document_records +
+│   │                            #   chunk_records + embedding_index_meta + vector_index + blob_store +
+│   │                            #   document_purge — ALL SQL lives here, callers use record functions
 │   ├── safety_checks/           # control plane: emergency triage (pre-check, fail-closed) + answer framing (post-check) (§3.3)
 │   │  # -- surface --
 │   ├── web_app.py               # FastAPI: /upload, /ask (body), / (UI); `tara` entry point; composition root
