@@ -73,9 +73,9 @@ def make_pdf():
 def offline_ingest_env(tmp_path, monkeypatch):
     """Isolated store + initialized schema + a deterministic offline text_embedder."""
     from tara import config
-    from tara.text_embeddings import text_embedder
-    from tara.storage.metadata_db import connect_db, init_db_schema
-    from tara.storage.vector_index import init_vector_table
+    from tara.semantic_search import text_embedder
+    from tara.local_data_stores.metadata_db import connect_db, init_db_schema
+    from tara.local_data_stores.vector_index import init_vector_table
 
     monkeypatch.setenv("TARA_DATA_DIR", str(tmp_path / "data"))
     monkeypatch.setenv("TARA_MODEL_MODE", "local")

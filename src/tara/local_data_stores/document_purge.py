@@ -7,8 +7,8 @@ leaves a "document gone but vectors remain" state.
 """
 from __future__ import annotations
 
-from tara.storage import blob_store, vector_index
-from tara.storage.metadata_db import connect_db
+from tara.local_data_stores import blob_store, vector_index
+from tara.local_data_stores.metadata_db import connect_db
 
 
 def purge_document(doc_id: str) -> bool:

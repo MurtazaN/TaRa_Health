@@ -2,7 +2,7 @@
 
 Callers must `load_vector_extension(conn)` once on a connection before using the
 add/search/delete functions (init_vector_table does this itself). Distances are
-L2; because embeddings are unit-normalized (see text_embeddings.text_embedder),
+L2; because embeddings are unit-normalized (see semantic_search.text_embedder),
 L2 distance is monotonic with cosine similarity, so nearest-by-distance ==
 most-similar.
 """

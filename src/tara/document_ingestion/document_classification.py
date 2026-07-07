@@ -6,7 +6,7 @@ prefer insurance documents (§3.4). Lands in Slice 6.
 """
 from __future__ import annotations
 
-from tara.storage.data_models import DocType
+from tara.data_models import DocType
 
 
 def classify_doc_type(full_text: str) -> DocType:

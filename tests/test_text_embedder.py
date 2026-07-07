@@ -8,7 +8,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from tara.text_embeddings import text_embedder
+from tara.semantic_search import text_embedder
 
 
 @dataclass

@@ -12,7 +12,7 @@ from pathlib import Path
 import pymupdf
 
 from tara.config import get_settings
-from tara.upload_validation import UploadError
+from tara.app_errors import UploadError
 
 # A PDF with less than this much extractable text across all pages is treated as
 # a scan and routed to OCR rather than the native-text path.

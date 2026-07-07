@@ -483,22 +483,33 @@ How the design above maps onto the code tree:
 
 ```
 tara-health/
-├── pyproject.toml          # deps wired to the chosen stack
-├── .env.example            # config: model mode, paths, models, api key, limits
+├── pyproject.toml               # deps wired to the chosen stack
+├── .env.example                 # config: model mode, paths, models, api key, limits
 ├── src/tara/
-│   ├── config.py           # central settings (paths, model mode, embed model, api key, limits, timeouts)
-│   ├── web_app.py          # FastAPI: /upload, /ask (body), / (UI); `tara` entry point
-│   ├── document_ingestion/ # source detection → text extraction(+spans) → classification → chunking → pipeline (§3.1)
-│   ├── text_embeddings/    # local text→vector embedding via OpenAI-compatible endpoint (§3.1e)
-│   ├── storage/            # metadata_db + vector_index + blob_store + document_purge, SQLCipher-ready (§3.2)
-│   ├── chunk_retrieval/    # embed question → doc-type filter → post-filtered search → abstain (§3.4)
-│   ├── llm_clients/        # interface + ollama_client + hosted_client (hybrid switch) (§3.5)
-│   ├── safety_checks/      # emergency triage (pre-check, fail-closed) + answer framing (post-check) (§3.3)
-│   ├── question_answering/ # answer prompts + question answerer — full query flow incl. numeric grounding (§5.2, §6)
-│   └── web/                # placeholder UI
-├── scripts/init_db.py      # create schema + vector table + index_meta
-└── tests/                  # ingestion/retrieval/safety + eval_harness (§8)
+│   │  # -- shared kernel (importable by every layer; imports nothing above it) --
+│   ├── config.py                # central settings (paths, model mode, embed model, api key, limits, timeouts)
+│   ├── data_models.py           # Document, Chunk, Citation, DocType (§4)
+│   ├── app_errors.py            # UploadError, IngestionError, IndexMismatchError → HTTP mapping in web_app
+│   ├── upload_validation.py     # upload boundary checks (§3.1a)
+│   │  # -- capabilities: the verbs Tara can perform --
+│   ├── document_ingestion/      # source detection → text extraction(+spans) → classification → chunking → pipeline (§3.1)
+│   ├── semantic_search/         # text embedding + chunk retrieval w/ abstention (§3.1e, §3.4)
+│   ├── question_answering/      # answer prompts + question answerer — full query flow incl. numeric grounding (§5.2, §6)
+│   │  # -- planes: what every capability stands on --
+│   ├── llm_clients/             # model plane: LLMClient interface + ollama/openai-compatible/hosted clients (§3.5)
+│   ├── local_data_stores/       # state plane: metadata_db + vector_index + blob_store + document_purge, SQLCipher-ready (§3.2)
+│   ├── safety_checks/           # control plane: emergency triage (pre-check, fail-closed) + answer framing (post-check) (§3.3)
+│   │  # -- surface --
+│   ├── web_app.py               # FastAPI: /upload, /ask (body), / (UI); `tara` entry point; composition root
+│   └── web_ui/                  # templates + static for the local UI
+│   # reserved for Phase 2 (created when the code exists): agent_orchestration/, agent_tools/
+├── scripts/initialize_data_stores.py   # create schema + vector table + index_meta
+└── tests/                       # unit + integration; behavior_evals/ lands with §8 (Slice 7)
 ```
+
+Import direction (enforceable rule): kernel ← planes ← capabilities ← safety/agent
+packages ← web_app. Capabilities never import each other, except
+`question_answering → semantic_search` and `→ safety_checks` (the §5.2 query flow).
 
 Every stub marks its intent with a docstring and a `TODO` describing its contract.
 When implementing, honor the contracts above (the v0.3 changes tighten several

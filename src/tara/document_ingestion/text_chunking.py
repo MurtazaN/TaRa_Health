@@ -8,7 +8,7 @@ page's canonical text at [char_start, char_end], preserving the citation invaria
 from __future__ import annotations
 
 from tara.document_ingestion.text_extraction import ExtractedSpan
-from tara.storage.data_models import Chunk
+from tara.data_models import Chunk
 
 # Rough token estimate; local models don't need exact token accounting for chunking.
 _CHARS_PER_TOKEN = 4

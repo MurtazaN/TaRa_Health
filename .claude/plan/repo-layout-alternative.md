@@ -1,6 +1,6 @@
 # Alternative repository layout (proposal vs design doc §11)
 
-**Status:** partially superseded (2026-07-07) — the naming pass renamed all folders/files IN PLACE (document_ingestion/, chunk_retrieval/, text_embeddings/, question_answering/, safety_checks/, storage file renames, web_app.py). What remains open from this proposal is only the STRUCTURAL regroup: domain/ kernel, documents/+search/ feature merge, error consolidation.
+**Status:** ADOPTED with amendments, 2026-07-07 — executed as the final structure. Amendments vs this draft: no `domain/` package (kernel = root modules `data_models.py` + `app_errors.py`, per naming rule 3); `search/`→`semantic_search/`; `storage/`→`local_data_stores/` (purge stays with the stores per design §3.2); `web/`→`web_ui/`; Phase 2 packages named `agent_orchestration/` + `agent_tools/`. Canonical tree now lives in design doc §11 and CLAUDE.md; this file is historical.
 **Scope:** the whole `src/tara/` tree, not just `storage/`.
 **Prompted by:** naming/cohesion review after Slice 1 (see the rename pass already
 applied: `tara/validation.py`, `vector.load_extension`/`add_embeddings`, `chunk_spans`).

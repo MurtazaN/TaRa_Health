@@ -9,12 +9,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from tara.chunk_retrieval.chunk_retriever import RetrievedChunk, retrieve_chunks
-from tara.llm_clients.interface import get_llm_client
+from tara.semantic_search.chunk_retriever import RetrievedChunk, retrieve_chunks
+from tara.llm_clients.llm_client_interface import get_llm_client
 from tara.question_answering.answer_prompts import ANSWER_SYSTEM_PROMPT, build_user_prompt
 from tara.safety_checks.answer_framing import apply_safety_framing
 from tara.safety_checks.emergency_triage import screen_for_emergency
-from tara.storage.data_models import Citation
+from tara.data_models import Citation
 
 
 @dataclass

@@ -9,9 +9,10 @@ import pytest
 from tara.document_ingestion.text_chunking import chunk_spans
 from tara.document_ingestion.source_kind_detection import SourceKind, detect_source_kind
 from tara.document_ingestion.text_extraction import extract_text_spans, page_canonical_text
-from tara.storage import vector_index
-from tara.storage.metadata_db import connect_db
-from tara.upload_validation import UploadError, validate_upload
+from tara.local_data_stores import vector_index
+from tara.local_data_stores.metadata_db import connect_db
+from tara.app_errors import UploadError
+from tara.upload_validation import validate_upload
 
 
 # --- detect / boundary validation (§3.1a) ---
@@ -154,7 +155,7 @@ def test_reingest_same_file_is_deduped(offline_ingest_env, make_pdf):
 @pytest.mark.integration
 def test_purge_removes_rows_vectors_and_blob(offline_ingest_env, make_pdf):
     from tara.document_ingestion.ingestion_pipeline import ingest_document
-    from tara.storage.document_purge import purge_document
+    from tara.local_data_stores.document_purge import purge_document
 
     doc = ingest_document("policy.pdf", make_pdf([["Specialist copay is $40 per visit."]]))
     blob_dir = offline_ingest_env.blob_dir
@@ -288,7 +289,7 @@ def test_pdf_page_cap_rejects_oversized(make_pdf, tmp_path, monkeypatch):
 @pytest.mark.integration
 def test_reconcile_removes_orphan_blobs_only(offline_ingest_env, make_pdf):
     from tara.document_ingestion.ingestion_pipeline import ingest_document
-    from tara.storage.document_purge import reconcile_orphan_blobs
+    from tara.local_data_stores.document_purge import reconcile_orphan_blobs
 
     doc = ingest_document("policy.pdf", make_pdf([["Specialist copay is $40 per visit."]]))
     orphan = offline_ingest_env.blob_dir / "deadbeefdeadbeef.pdf"

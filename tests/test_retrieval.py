@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from tara.chunk_retrieval.chunk_retriever import retrieve_chunks
+from tara.semantic_search.chunk_retriever import retrieve_chunks
 
 
 @pytest.mark.integration
@@ -59,8 +59,8 @@ def test_failed_document_is_invisible_to_retrieval(offline_ingest_env, make_pdf,
 
 @pytest.mark.integration
 def test_vector_search_post_filters_by_doc_id(offline_ingest_env):
-    from tara.storage import vector_index
-    from tara.storage.metadata_db import connect_db
+    from tara.local_data_stores import vector_index
+    from tara.local_data_stores.metadata_db import connect_db
     from tests.conftest import fake_embed_one
 
     dim = offline_ingest_env.embed_dim

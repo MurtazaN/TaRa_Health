@@ -11,10 +11,9 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
+from tara.app_errors import IndexMismatchError, IngestionError, UploadError
+from tara.document_ingestion.ingestion_pipeline import ingest_document
 from tara.question_answering.question_answerer import answer_question
-from tara.document_ingestion.ingestion_pipeline import IngestionError, ingest_document
-from tara.storage.metadata_db import IndexMismatchError
-from tara.upload_validation import UploadError
 
 app = FastAPI(title="TaRa Health", version="0.1.0")
 
@@ -42,7 +41,7 @@ class AskRequest(BaseModel):
     question: str
     prefer_hosted: bool = False
 
-_web_dir = Path(__file__).parent / "web"
+_web_dir = Path(__file__).parent / "web_ui"
 templates = Jinja2Templates(directory=str(_web_dir / "templates"))
 app.mount("/static", StaticFiles(directory=str(_web_dir / "static")), name="static")
 
@@ -80,9 +79,9 @@ def main() -> None:
     import uvicorn
 
     from tara.config import ensure_data_dirs
-    from tara.storage.metadata_db import connect_db, init_db_schema
-    from tara.storage.document_purge import reconcile_orphan_blobs
-    from tara.storage.vector_index import init_vector_table
+    from tara.local_data_stores.metadata_db import connect_db, init_db_schema
+    from tara.local_data_stores.document_purge import reconcile_orphan_blobs
+    from tara.local_data_stores.vector_index import init_vector_table
 
     ensure_data_dirs()
     init_db_schema()

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import pytest
 
-from tara.storage.metadata_db import connect_db, init_db_schema
+from tara.local_data_stores.metadata_db import connect_db, init_db_schema
 
 
 def _columns(conn, table: str) -> set[str]:

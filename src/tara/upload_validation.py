@@ -9,14 +9,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from tara.app_errors import UploadError
 from tara.config import get_settings
 
 # Allowed upload extensions (§3.1a). Lower-cased suffixes.
 ALLOWED_EXTENSIONS = frozenset({".pdf", ".png", ".jpg", ".jpeg", ".tiff"})
-
-
-class UploadError(ValueError):
-    """An upload failed boundary validation (extension, size, or page count)."""
 
 
 def validated_file_suffix(filename: str) -> str:

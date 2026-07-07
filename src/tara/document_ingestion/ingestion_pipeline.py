@@ -20,18 +20,15 @@ import sqlite3
 import uuid
 from datetime import datetime, timezone
 
+from tara.app_errors import IngestionError
 from tara.config import get_settings
-from tara.text_embeddings import text_embedder
+from tara.data_models import Document
 from tara.document_ingestion.text_chunking import chunk_spans
 from tara.document_ingestion.text_extraction import extract_text_spans
-from tara.storage import blob_store, metadata_db, vector_index
-from tara.storage.data_models import Document
-from tara.storage.document_purge import purge_document
+from tara.local_data_stores import blob_store, metadata_db, vector_index
+from tara.local_data_stores.document_purge import purge_document
+from tara.semantic_search import text_embedder
 from tara.upload_validation import validate_upload
-
-
-class IngestionError(RuntimeError):
-    """Ingestion failed after validation (e.g. extraction produced no text)."""
 
 
 def _document_from_row(row: sqlite3.Row) -> Document:

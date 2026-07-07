@@ -4,13 +4,14 @@ guards embedding-index integrity via the index_meta helpers (design §3.2, §4).
 
 Uses SQLCipher for at-rest encryption when a db_key is configured
 (see config.Settings.db_key); falls back to plain sqlite3 for early development.
-The vector table (vec_chunks) lives in storage.vector_index — it needs the
-sqlite-vec extension loaded, so it is created separately against the same file.
+The vector table (vec_chunks) lives in local_data_stores.vector_index — it needs
+the sqlite-vec extension loaded, so it is created separately against the same file.
 """
 from __future__ import annotations
 
 import sqlite3
 
+from tara.app_errors import IndexMismatchError
 from tara.config import get_settings
 
 
@@ -100,11 +101,6 @@ def init_db_schema() -> None:
         conn.commit()
     finally:
         conn.close()
-
-
-class IndexMismatchError(RuntimeError):
-    """Raised when the configured embedding model/dim differs from what the index
-    was built with (§3.2) — serving queries would return garbage distances."""
 
 
 def read_index_meta(conn: sqlite3.Connection) -> tuple[str, int] | None:

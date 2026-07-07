@@ -8,10 +8,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from tara.app_errors import IndexMismatchError
 from tara.config import get_settings
-from tara.storage import metadata_db, vector_index
-from tara.storage.data_models import Chunk
-from tara.text_embeddings import text_embedder
+from tara.data_models import Chunk
+from tara.local_data_stores import metadata_db, vector_index
+from tara.semantic_search import text_embedder
 
 
 @dataclass
@@ -34,7 +35,7 @@ def _is_index_ready(conn) -> bool:
         return False
     settings = get_settings()
     if stored_index_meta != (settings.embed_model, settings.embed_dim):
-        raise metadata_db.IndexMismatchError(
+        raise IndexMismatchError(
             f"Index built with {stored_index_meta[0]} (dim {stored_index_meta[1]}) but config is "
             f"{settings.embed_model} (dim {settings.embed_dim}). Re-index required."
         )
