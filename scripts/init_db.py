@@ -2,13 +2,13 @@
 
     python scripts/init_db.py
 """
-from tara.storage.db import connect, init_schema
+from tara.storage.db import connect_db, init_db_schema
 from tara.storage.vector import init_vector_table
 
 
 def main() -> None:
-    init_schema()
-    conn = connect()
+    init_db_schema()
+    conn = connect_db()
     try:
         init_vector_table(conn)
     finally:

@@ -1,10 +1,10 @@
 """Shared fixtures. Put sample documents (a benefits summary, a lab report, an
 EOB, etc.) under tests/fixtures/ to drive the eval harness.
 
-Slice 1 tests run fully offline: `ingest_env` points storage at a tmp dir and
-replaces the embedder with a deterministic bag-of-words fake so no LM Studio /
+Slice 1 tests run fully offline: `offline_ingest_env` points storage at a tmp dir and
+replaces the text embedder with a deterministic bag-of-words fake so no LM Studio /
 network call is needed. The fake produces unit vectors, so cosine similarity
-(and the retriever's L2->cosine conversion) behaves like the real thing.
+(and the chunk retriever's L2->cosine conversion) behaves like the real thing.
 """
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ def fixtures_dir() -> Path:
 
 
 @pytest.fixture
-def tara_env(tmp_path, monkeypatch):
+def isolated_env(tmp_path, monkeypatch):
     """Point TaRa's storage at an isolated tmp dir and reset the cached settings.
 
     Env vars take precedence over the real .env in pydantic-settings, so this
@@ -70,11 +70,11 @@ def make_pdf():
 
 
 @pytest.fixture
-def ingest_env(tmp_path, monkeypatch):
-    """Isolated store + initialized schema + a deterministic offline embedder."""
+def offline_ingest_env(tmp_path, monkeypatch):
+    """Isolated store + initialized schema + a deterministic offline text_embedder."""
     from tara import config
-    from tara.embeddings import embedder
-    from tara.storage.db import connect, init_schema
+    from tara.embeddings import text_embedder
+    from tara.storage.db import connect_db, init_db_schema
     from tara.storage.vector import init_vector_table
 
     monkeypatch.setenv("TARA_DATA_DIR", str(tmp_path / "data"))
@@ -85,11 +85,11 @@ def ingest_env(tmp_path, monkeypatch):
     config.ensure_dirs(settings)
 
     dim = settings.embed_dim
-    monkeypatch.setattr(embedder, "embed_texts", lambda texts: [fake_embed_one(t, dim) for t in texts])
-    monkeypatch.setattr(embedder, "embed_query", lambda text: fake_embed_one(text, dim))
+    monkeypatch.setattr(text_embedder, "embed_texts", lambda texts: [fake_embed_one(t, dim) for t in texts])
+    monkeypatch.setattr(text_embedder, "embed_query", lambda text: fake_embed_one(text, dim))
 
-    init_schema()
-    conn = connect()
+    init_db_schema()
+    conn = connect_db()
     try:
         init_vector_table(conn)
     finally:

@@ -1,4 +1,6 @@
-"""SQLite connection + relational schema (design §3.2, §4).
+"""The on-device metadata database: opens SQLite connections (`connect_db`),
+creates the relational schema (documents, chunks, queries, index_meta), and
+guards embedding-index integrity via the index_meta helpers (design §3.2, §4).
 
 Uses SQLCipher for at-rest encryption when a db_key is configured
 (see config.Settings.db_key); falls back to plain sqlite3 for early development.
@@ -12,10 +14,13 @@ import sqlite3
 from tara.config import get_settings
 
 
-def connect() -> sqlite3.Connection:
+def connect_db() -> sqlite3.Connection:
+    '''
+    The DB write needs its parent dir; creating it here is idempotent and local
+    (the cached settings factory stays side-effect free — see config.ensure_dirs).
+    '''
     settings = get_settings()
-    # The DB write needs its parent dir; creating it here is idempotent and local
-    # (the cached settings factory stays side-effect free — see config.ensure_dirs).
+
     settings.data_dir.mkdir(parents=True, exist_ok=True)
     # TODO: when settings.db_key is set, open via pysqlcipher3 and run
     #       `PRAGMA key = ?` before any other statement. Until then, plain sqlite3.
@@ -83,8 +88,8 @@ CREATE TABLE IF NOT EXISTS queries (
 """
 
 
-def init_schema() -> None:
-    conn = connect()
+def init_db_schema() -> None:
+    conn = connect_db()
     try:
         conn.executescript(SCHEMA)
         # The vector virtual table is created by storage.vector (needs the extension loaded).

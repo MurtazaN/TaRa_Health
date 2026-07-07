@@ -1,7 +1,8 @@
-"""Decide how to extract: native-text PDF vs scanned PDF vs image, and validate
-the upload at the system boundary (design §3.1a).
+"""Decide how to extract: native-text PDF vs scanned PDF vs image (design §3.1a/b).
 
-The branch matters because scans need OCR while digital PDFs do not.
+The branch matters because scans need OCR while digital PDFs do not. Upload
+boundary validation lives in tara.validation; this module assumes the file
+already passed it.
 """
 from __future__ import annotations
 
@@ -11,17 +12,11 @@ from pathlib import Path
 import pymupdf
 
 from tara.config import get_settings
-
-# Allowed upload extensions (§3.1a). Lower-cased suffixes.
-ALLOWED_EXTENSIONS = frozenset({".pdf", ".png", ".jpg", ".jpeg", ".tiff"})
+from tara.validation import UploadError
 
 # A PDF with less than this much extractable text across all pages is treated as
 # a scan and routed to OCR rather than the native-text path.
 _MIN_TEXT_CHARS = 16
-
-
-class UploadError(ValueError):
-    """An upload failed boundary validation (bad extension or too large)."""
 
 
 class SourceKind(str, Enum):
@@ -30,28 +25,12 @@ class SourceKind(str, Enum):
     IMAGE = "image"           # jpg/png/etc -> Docling w/ OCR
 
 
-def validate_upload(filename: str, size_bytes: int) -> None:
-    """Fail fast on a malformed/oversized upload before any processing (§3.1a).
-
-    Validate on the raw filename + byte count *before* the blob is written, so a
-    bad upload never touches disk or the extractor.
-    """
-    suffix = Path(filename).suffix.lower()
-    if suffix not in ALLOWED_EXTENSIONS:
-        allowed = ", ".join(sorted(ALLOWED_EXTENSIONS))
-        raise UploadError(f"Unsupported file type '{suffix or filename}'. Allowed: {allowed}.")
-    max_bytes = get_settings().max_upload_bytes
-    if size_bytes > max_bytes:
-        raise UploadError(f"File is {size_bytes} bytes; the limit is {max_bytes} bytes.")
-    if size_bytes <= 0:
-        raise UploadError("File is empty.")
-
-
-def detect(path: Path) -> SourceKind:
+def detect_source_kind(path: Path) -> SourceKind:
     """Classify how to extract. Assumes the upload already passed validate_upload.
 
     Heuristic (§3.1a/b): a PDF that yields little/no extractable text is a scan and
-    routes to OCR; otherwise it takes the fast native-text path.
+    routes to OCR; otherwise it takes the fast native-text path. The page ceiling
+    bounds CPU/memory on a pathological (but byte-small) file.
     """
     suffix = path.suffix.lower()
     if suffix != ".pdf":

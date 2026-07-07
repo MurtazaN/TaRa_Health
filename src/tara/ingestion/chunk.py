@@ -14,11 +14,11 @@ from tara.storage.models import Chunk
 _CHARS_PER_TOKEN = 4
 
 
-def _approx_tokens(char_len: int) -> int:
+def _approximate_token_count(char_len: int) -> int:
     return max(1, char_len // _CHARS_PER_TOKEN)
 
 
-def _line_offsets(text: str) -> list[tuple[int, int]]:
+def _line_char_offsets(text: str) -> list[tuple[int, int]]:
     """Return [(start, end), ...] for each line in `text` (offsets into `text`).
     end is exclusive and excludes the trailing newline."""
     offsets: list[tuple[int, int]] = []
@@ -29,9 +29,10 @@ def _line_offsets(text: str) -> list[tuple[int, int]]:
     return offsets
 
 
-def _chunk_span(doc_id: str, span: ExtractedSpan, target_tokens: int, overlap: int) -> list[Chunk]:
+def _chunk_single_span(doc_id: str, span: ExtractedSpan,
+                       target_tokens: int, overlap: int) -> list[Chunk]:
     text = span.text
-    lines = _line_offsets(text)
+    lines = _line_char_offsets(text)
     chunks: list[Chunk] = []
     i, n = 0, len(lines)
     while i < n:
@@ -39,7 +40,7 @@ def _chunk_span(doc_id: str, span: ExtractedSpan, target_tokens: int, overlap: i
         # Always take at least one line, then keep adding until the budget is hit.
         while j < n and (tokens < target_tokens or j == i):
             ls, le = lines[j]
-            tokens += _approx_tokens(le - ls)
+            tokens += _approximate_token_count(le - ls)
             j += 1
         local_start = lines[i][0]
         local_end = lines[j - 1][1]
@@ -59,16 +60,16 @@ def _chunk_span(doc_id: str, span: ExtractedSpan, target_tokens: int, overlap: i
         back, k = 0, j - 1
         while k > i and back < overlap:
             ls, le = lines[k]
-            back += _approx_tokens(le - ls)
+            back += _approximate_token_count(le - ls)
             k -= 1
         i = max(k + 1, i + 1)
     return chunks
 
 
-def chunk(doc_id: str, spans: list[ExtractedSpan],
-          target_tokens: int = 800, overlap: int = 100) -> list[Chunk]:
+def chunk_spans(doc_id: str, spans: list[ExtractedSpan],
+                target_tokens: int = 800, overlap: int = 100) -> list[Chunk]:
     """Pack spans into ~target_tokens chunks, page-bounded, preserving provenance."""
     chunks: list[Chunk] = []
     for span in spans:
-        chunks.extend(_chunk_span(doc_id, span, target_tokens, overlap))
+        chunks.extend(_chunk_single_span(doc_id, span, target_tokens, overlap))
     return chunks

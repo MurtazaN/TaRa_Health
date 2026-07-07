@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pymupdf
 
-from tara.ingestion.detect import SourceKind, detect
+from tara.ingestion.detect import SourceKind, detect_source_kind
 
 
 @dataclass
@@ -31,11 +31,11 @@ class ExtractedSpan:
     text: str
 
 
-def extract(path: Path) -> list[ExtractedSpan]:
-    kind = detect(path)
+def extract_text_spans(path: Path) -> list[ExtractedSpan]:
+    kind = detect_source_kind(path)
     if kind is SourceKind.PDF_TEXT:
-        return _extract_pymupdf(path)
-    return _extract_docling(path)
+        return _extract_native_pdf_spans(path)
+    return _extract_ocr_spans(path)
 
 
 def page_canonical_text(page: pymupdf.Page) -> str:
@@ -52,7 +52,7 @@ def page_canonical_text(page: pymupdf.Page) -> str:
     return "\n".join(lines)
 
 
-def _extract_pymupdf(path: Path) -> list[ExtractedSpan]:
+def _extract_native_pdf_spans(path: Path) -> list[ExtractedSpan]:
     spans: list[ExtractedSpan] = []
     with pymupdf.open(path) as doc:
         for pageno, page in enumerate(doc, start=1):
@@ -62,7 +62,7 @@ def _extract_pymupdf(path: Path) -> list[ExtractedSpan]:
     return spans
 
 
-def _extract_docling(path: Path) -> list[ExtractedSpan]:
+def _extract_ocr_spans(path: Path) -> list[ExtractedSpan]:
     """OCR path for scans/images (Slice 5). Citations resolve to page level there
     because OCR char offsets aren't pixel-mappable (§3.1b)."""
     raise NotImplementedError("OCR extraction (scans/images) lands in Slice 5.")

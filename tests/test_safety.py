@@ -14,5 +14,5 @@ EMERGENCY_INPUTS = [
 @pytest.mark.skip(reason="stub")
 @pytest.mark.parametrize("text", EMERGENCY_INPUTS)
 def test_emergencies_are_caught(text):
-    from tara.safety.triage import screen
-    assert screen(text).is_emergency
+    from tara.safety.triage import screen_for_emergency
+    assert screen_for_emergency(text).is_emergency

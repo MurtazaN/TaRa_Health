@@ -15,7 +15,7 @@ from tara.config import get_settings
 
 
 @lru_cache
-def _client() -> OpenAI:
+def _embedding_api_client() -> OpenAI:
     s = get_settings()
     # LM Studio serves an OpenAI-compatible API at {lmstudio_host}/v1 and ignores
     # the key; the client still requires a non-empty value (config.local_api_key).
@@ -26,7 +26,7 @@ def _client() -> OpenAI:
     )
 
 
-def _normalize(vec: list[float]) -> list[float]:
+def _normalize_to_unit_length(vec: list[float]) -> list[float]:
     norm = math.sqrt(sum(x * x for x in vec))
     if norm < 1e-12:  # all-zero (or underflowed) vector: nothing to normalize
         return vec
@@ -38,7 +38,7 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
     if not texts:
         return []
     s = get_settings()
-    resp = _client().embeddings.create(model=s.embed_model, input=texts)
+    resp = _embedding_api_client().embeddings.create(model=s.embed_model, input=texts)
     # The API tags each vector with its input index; sort defensively.
     ordered = sorted(resp.data, key=lambda d: d.index)
     if len(ordered) != len(texts):
@@ -47,14 +47,14 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
         raise RuntimeError(
             f"Embedding endpoint returned {len(ordered)} vectors for {len(texts)} inputs."
         )
-    return [_normalize(list(d.embedding)) for d in ordered]
+    return [_normalize_to_unit_length(list(d.embedding)) for d in ordered]
 
 
 def embed_query(text: str) -> list[float]:
     return embed_texts([text])[0]
 
 
-def probe_dim() -> int:
+def probe_embedding_dimension() -> int:
     """Ask the live endpoint for the actual embedding dimension (§3.2).
 
     Requires the embedding server to be reachable; used by startup validation,
@@ -63,10 +63,10 @@ def probe_dim() -> int:
     return len(embed_query("dimension probe"))
 
 
-def verify_dim() -> None:
+def verify_embedding_dimension() -> None:
     """Fail loudly if the configured dimension disagrees with the live model."""
     s = get_settings()
-    actual = probe_dim()
+    actual = probe_embedding_dimension()
     if actual != s.embed_dim:
         raise RuntimeError(
             f"TARA_EMBED_DIM={s.embed_dim} but embedding model '{s.embed_model}' "

@@ -11,10 +11,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
-from tara.answering.answerer import ask
-from tara.ingestion.detect import UploadError
-from tara.ingestion.pipeline import IngestionError, ingest
+from tara.answering.answerer import answer_question
+from tara.ingestion.pipeline import IngestionError, ingest_document
 from tara.storage.db import IndexMismatchError
+from tara.validation import UploadError
 
 app = FastAPI(title="TaRa Health", version="0.1.0")
 
@@ -57,13 +57,13 @@ def index(request: Request):
 async def upload(file: UploadFile = File(...)):
     if not file.filename:
         raise HTTPException(status_code=400, detail="Uploaded file must have a filename.")
-    doc = ingest(file.filename, await file.read())
+    doc = ingest_document(file.filename, await file.read())
     return {"doc_id": doc.doc_id, "filename": doc.filename, "doc_type": doc.doc_type}
 
 
 @app.post("/ask")
 def ask_endpoint(payload: AskRequest):
-    answer = ask(payload.question, prefer_hosted=payload.prefer_hosted)
+    answer = answer_question(payload.question, prefer_hosted=payload.prefer_hosted)
     return {
         "answer": answer.text,
         "safety_flag": answer.safety_flag,
@@ -76,13 +76,13 @@ def main() -> None:
     import uvicorn
 
     from tara.config import ensure_dirs
-    from tara.storage.db import connect, init_schema
+    from tara.storage.db import connect_db, init_db_schema
     from tara.storage.purge import reconcile_orphan_blobs
     from tara.storage.vector import init_vector_table
 
     ensure_dirs()
-    init_schema()
-    conn = connect()
+    init_db_schema()
+    conn = connect_db()
     try:
         init_vector_table(conn)
     finally:

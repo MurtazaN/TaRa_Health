@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import pytest
 
-from tara.storage.db import connect, init_schema
+from tara.storage.db import connect_db, init_db_schema
 
 
 def _columns(conn, table: str) -> set[str]:
@@ -13,9 +13,9 @@ def _columns(conn, table: str) -> set[str]:
 
 
 @pytest.mark.integration
-def test_schema_builds_with_v03_columns(tara_env):
-    init_schema()
-    conn = connect()
+def test_schema_builds_with_v03_columns(isolated_env):
+    init_db_schema()
+    conn = connect_db()
     try:
         assert {"content_hash", "status"} <= _columns(conn, "documents")
         assert {"retrieved_chunk_ids", "model_route"} <= _columns(conn, "queries")
@@ -25,8 +25,8 @@ def test_schema_builds_with_v03_columns(tara_env):
 
 
 @pytest.mark.integration
-def test_connect_enables_foreign_keys(tara_env):
-    conn = connect()
+def test_connect_enables_foreign_keys(isolated_env):
+    conn = connect_db()
     try:
         assert conn.execute("PRAGMA foreign_keys").fetchone()[0] == 1
     finally:
@@ -34,9 +34,9 @@ def test_connect_enables_foreign_keys(tara_env):
 
 
 @pytest.mark.integration
-def test_document_delete_cascades_to_chunks(tara_env):
-    init_schema()
-    conn = connect()
+def test_document_delete_cascades_to_chunks(isolated_env):
+    init_db_schema()
+    conn = connect_db()
     try:
         conn.execute(
             "INSERT INTO documents (doc_id, filename, uploaded_at) VALUES (?, ?, ?)",

@@ -8,7 +8,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from tara.embeddings import embedder
+from tara.embeddings import text_embedder
 
 
 @dataclass
@@ -32,13 +32,13 @@ class _FakeClient:
 
 
 @pytest.fixture
-def fake_client(monkeypatch):
-    monkeypatch.setattr(embedder, "_client", lambda: _FakeClient())
+def fake_embedding_client(monkeypatch):
+    monkeypatch.setattr(text_embedder, "_embedding_api_client", lambda: _FakeClient())
 
 
 @pytest.mark.unit
-def test_embed_texts_preserves_order_and_normalizes(fake_client):
-    out = embedder.embed_texts(["a", "b"])
+def test_embed_texts_preserves_order_and_normalizes(fake_embedding_client):
+    out = text_embedder.embed_texts(["a", "b"])
     assert len(out) == 2
     # index 0 -> [1,0,0] normalized -> [1,0,0]; index 1 -> [2,0,0] -> [1,0,0]
     for vec in out:
@@ -47,13 +47,13 @@ def test_embed_texts_preserves_order_and_normalizes(fake_client):
 
 
 @pytest.mark.unit
-def test_embed_texts_empty_is_noop(fake_client):
-    assert embedder.embed_texts([]) == []
+def test_embed_texts_empty_is_noop(fake_embedding_client):
+    assert text_embedder.embed_texts([]) == []
 
 
 @pytest.mark.unit
-def test_embed_query_returns_single_vector(fake_client):
-    assert len(embedder.embed_query("hello")) == 3
+def test_embed_query_returns_single_vector(fake_embedding_client):
+    assert len(text_embedder.embed_query("hello")) == 3
 
 
 @pytest.mark.unit
@@ -63,16 +63,16 @@ def test_embed_texts_rejects_count_mismatch(monkeypatch):
             # Return fewer vectors than inputs -> must raise, not silently truncate.
             return type("Resp", (), {"data": [_FakeEmbedding([1.0, 0.0, 0.0], 0)]})
 
-    monkeypatch.setattr(embedder, "_client",
+    monkeypatch.setattr(text_embedder, "_embedding_api_client",
                         lambda: type("C", (), {"embeddings": _ShortEmbeddings()}))
     with pytest.raises(RuntimeError, match="vectors"):
-        embedder.embed_texts(["a", "b"])
+        text_embedder.embed_texts(["a", "b"])
 
 
 @pytest.mark.unit
-def test_verify_dim_raises_on_mismatch(fake_client, monkeypatch):
+def test_verify_embedding_dimension_raises_on_mismatch(fake_embedding_client, monkeypatch):
     # Fake returns dim 3; configure a different expected dim.
-    monkeypatch.setattr(embedder, "get_settings",
+    monkeypatch.setattr(text_embedder, "get_settings",
                         lambda: type("S", (), {"embed_dim": 999, "embed_model": "m"}))
     with pytest.raises(RuntimeError, match="dimension"):
-        embedder.verify_dim()
+        text_embedder.verify_embedding_dimension()

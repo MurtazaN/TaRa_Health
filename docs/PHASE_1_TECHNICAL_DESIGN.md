@@ -166,7 +166,7 @@ The vector table is created separately from the relational schema because it nee
 the sqlite-vec extension loaded; it is created on a separate connection against the
 same db file (not the same connection object). Connections opened for request
 handlers use `check_same_thread=False` because FastAPI runs sync handlers in a
-threadpool (§3.5). `connect()` sets `PRAGMA foreign_keys = ON` so declared cascades
+threadpool (§3.5). `connect_db()` sets `PRAGMA foreign_keys = ON` so declared cascades
 actually fire.
 
 **Embedding model/dimension integrity.** `TARA_EMBED_DIM` must match
@@ -492,7 +492,7 @@ tara-health/
 │   ├── embeddings/         # local sentence-transformers (§3.1e)
 │   ├── storage/            # sqlite + sqlite-vec + blobs, purge, SQLCipher-ready (§3.2)
 │   ├── retrieval/          # embed query → doc-type filter → post-filtered search → abstain (§3.4)
-│   ├── llm/                # base + local_ollama + hosted (hybrid switch) (§3.5)
+│   ├── llm_clients/        # interface + ollama_client + hosted_client (hybrid switch) (§3.5)
 │   ├── safety/             # triage (pre-check, fail-closed) + framing (post-check) (§3.3)
 │   ├── answering/          # prompts + answerer — full query flow incl. numeric grounding (§5.2, §6)
 │   └── web/                # placeholder UI

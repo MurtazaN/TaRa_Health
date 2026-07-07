@@ -1,9 +1,9 @@
 """Vector index backed by sqlite-vec. One row per chunk, keyed by chunk_id.
 
-Callers must `load(conn)` once on a connection before using add/search/delete
-(init_vector_table does this itself). Distances are L2; because embeddings are
-unit-normalized (see embeddings.embedder), L2 distance is monotonic with cosine
-similarity, so nearest-by-distance == most-similar.
+Callers must `load_vector_extension(conn)` once on a connection before using the
+add/search/delete functions (init_vector_table does this itself). Distances are
+L2; because embeddings are unit-normalized (see embeddings.text_embedder), L2 distance
+is monotonic with cosine similarity, so nearest-by-distance == most-similar.
 """
 from __future__ import annotations
 
@@ -19,8 +19,8 @@ from tara.config import get_settings
 _POSTFILTER_OVERFETCH = 5
 
 
-def load(conn: sqlite3.Connection) -> None:
-    """Load the sqlite-vec extension on this connection (idempotent)."""
+def load_vector_extension(conn: sqlite3.Connection) -> None:
+    """Load the sqlite-vec extension on this connection (idempotent, per-connection)."""
     conn.enable_load_extension(True)
     try:
         sqlite_vec.load(conn)
@@ -29,7 +29,7 @@ def load(conn: sqlite3.Connection) -> None:
 
 
 def init_vector_table(conn: sqlite3.Connection) -> None:
-    load(conn)
+    load_vector_extension(conn)
     dim = get_settings().embed_dim
     conn.execute(
         f"CREATE VIRTUAL TABLE IF NOT EXISTS vec_chunks "
@@ -38,14 +38,14 @@ def init_vector_table(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
-def add(conn: sqlite3.Connection, chunk_id: str, embedding: list[float]) -> None:
+def add_embedding(conn: sqlite3.Connection, chunk_id: str, embedding: list[float]) -> None:
     conn.execute(
         "INSERT INTO vec_chunks (chunk_id, embedding) VALUES (?, ?)",
         (chunk_id, serialize_float32(embedding)),
     )
 
 
-def add_many(conn: sqlite3.Connection, items: list[tuple[str, list[float]]]) -> None:
+def add_embeddings(conn: sqlite3.Connection, items: list[tuple[str, list[float]]]) -> None:
     """Batch insert (chunk_id, embedding) pairs for ingestion throughput."""
     conn.executemany(
         "INSERT INTO vec_chunks (chunk_id, embedding) VALUES (?, ?)",
@@ -53,7 +53,7 @@ def add_many(conn: sqlite3.Connection, items: list[tuple[str, list[float]]]) -> 
     )
 
 
-def delete(conn: sqlite3.Connection, chunk_ids: list[str]) -> None:
+def delete_embeddings(conn: sqlite3.Connection, chunk_ids: list[str]) -> None:
     """Delete vector rows by chunk_id (no FK to chunks, so this is explicit; §3.2)."""
     if not chunk_ids:
         return
@@ -61,7 +61,7 @@ def delete(conn: sqlite3.Connection, chunk_ids: list[str]) -> None:
     conn.execute(f"DELETE FROM vec_chunks WHERE chunk_id IN ({placeholders})", chunk_ids)
 
 
-def search(conn: sqlite3.Connection, query_vec: list[float], k: int,
+def find_nearest_chunks(conn: sqlite3.Connection, query_vec: list[float], k: int,
            doc_ids: list[str] | None = None) -> list[tuple[str, float]]:
     """Return the k nearest [(chunk_id, distance), ...], ascending by distance.
 

@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from tara.config import get_settings
-from tara.embeddings import embedder
+from tara.embeddings import text_embedder
 from tara.storage import db, vector
 from tara.storage.models import Chunk
 
@@ -21,12 +21,12 @@ class RetrievedChunk:
     score: float  # cosine similarity in [-1, 1]; higher is more relevant
 
 
-def _similarity(l2_distance: float) -> float:
+def _l2_distance_to_cosine_similarity(l2_distance: float) -> float:
     """Convert L2 distance between unit vectors to cosine similarity."""
     return 1.0 - (l2_distance * l2_distance) / 2.0
 
 
-def _require_fresh_index(conn) -> bool:
+def _is_index_ready(conn) -> bool:
     """True if the index is usable. Raises if the stored embed model/dim differs
     from config (stale index; §3.2). Returns False if nothing is indexed yet."""
     stored = db.read_index_meta(conn)
@@ -41,15 +41,15 @@ def _require_fresh_index(conn) -> bool:
     return True
 
 
-def retrieve(question: str, doc_type_hint: str | None = None) -> list[RetrievedChunk]:
+def retrieve_chunks(question: str, doc_type_hint: str | None = None) -> list[RetrievedChunk]:
     settings = get_settings()
-    conn = db.connect()
+    conn = db.connect_db()
     try:
-        vector.load(conn)
-        if not _require_fresh_index(conn):
+        vector.load_vector_extension(conn)
+        if not _is_index_ready(conn):
             return []
-        qvec = embedder.embed_query(question)
-        hits = vector.search(conn, qvec, settings.top_k)  # doc-type filter: Slice 6
+        qvec = text_embedder.embed_query(question)
+        hits = vector.find_nearest_chunks(conn, qvec, settings.top_k)  # doc-type filter: Slice 6
         results: list[RetrievedChunk] = []
         for chunk_id, distance in hits:
             row = conn.execute(
@@ -65,7 +65,7 @@ def retrieve(question: str, doc_type_hint: str | None = None) -> list[RetrievedC
                     char_start=row["char_start"], char_end=row["char_end"], text=row["text"],
                 ),
                 filename=row["filename"],
-                score=_similarity(distance),
+                score=_l2_distance_to_cosine_similarity(distance),
             ))
     finally:
         conn.close()

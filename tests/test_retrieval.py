@@ -4,19 +4,19 @@ from __future__ import annotations
 
 import pytest
 
-from tara.retrieval.retriever import retrieve
+from tara.retrieval.chunk_retriever import retrieve_chunks
 
 
 @pytest.mark.integration
-def test_retrieve_returns_expected_chunk_with_provenance(ingest_env, make_pdf):
-    from tara.ingestion.pipeline import ingest
+def test_retrieve_returns_expected_chunk_with_provenance(offline_ingest_env, make_pdf):
+    from tara.ingestion.pipeline import ingest_document
 
-    ingest("policy.pdf", make_pdf([
+    ingest_document("policy.pdf", make_pdf([
         ["Specialist copay is $40 per visit."],
         ["Annual deductible is $1500 for the plan year."],
     ]))
 
-    results = retrieve("what is my specialist copay")
+    results = retrieve_chunks("what is my specialist copay")
     assert results, "expected a grounded hit"
     top = results[0]
     assert "$40" in top.chunk.text
@@ -25,48 +25,48 @@ def test_retrieve_returns_expected_chunk_with_provenance(ingest_env, make_pdf):
     # Provenance is well-formed: the span points back into the chunk text.
     assert top.chunk.char_start >= 0
     assert top.chunk.char_end > top.chunk.char_start
-    assert top.score >= ingest_env.abstain_threshold
+    assert top.score >= offline_ingest_env.abstain_threshold
 
 
 @pytest.mark.integration
-def test_retrieve_abstains_on_unsupported_question(ingest_env, make_pdf):
-    from tara.ingestion.pipeline import ingest
+def test_retrieve_abstains_on_unsupported_question(offline_ingest_env, make_pdf):
+    from tara.ingestion.pipeline import ingest_document
 
-    ingest("policy.pdf", make_pdf([["Specialist copay is $40 per visit."]]))
+    ingest_document("policy.pdf", make_pdf([["Specialist copay is $40 per visit."]]))
     # No overlap with any indexed text -> below the abstention threshold.
-    assert retrieve("banana kiwi mango orchestra volcano") == []
+    assert retrieve_chunks("banana kiwi mango orchestra volcano") == []
 
 
 @pytest.mark.integration
-def test_retrieve_on_empty_index_returns_empty(ingest_env):
-    assert retrieve("anything at all") == []
+def test_retrieve_on_empty_index_returns_empty(offline_ingest_env):
+    assert retrieve_chunks("anything at all") == []
 
 
 @pytest.mark.integration
-def test_failed_document_is_invisible_to_retrieval(ingest_env, make_pdf, monkeypatch):
+def test_failed_document_is_invisible_to_retrieval(offline_ingest_env, make_pdf, monkeypatch):
     from tara.ingestion import pipeline
 
     # Force a post-commit failure so a doc row exists but ends 'indexing_failed'.
-    monkeypatch.setattr(pipeline.vector, "add_many",
+    monkeypatch.setattr(pipeline.vector, "add_embeddings",
                         lambda conn, items: (_ for _ in ()).throw(RuntimeError("vec down")))
     with pytest.raises(RuntimeError):
-        pipeline.ingest("policy.pdf", make_pdf([["Specialist copay is $40 per visit."]]))
+        pipeline.ingest_document("policy.pdf", make_pdf([["Specialist copay is $40 per visit."]]))
 
-    assert retrieve("specialist copay") == []  # not visible
+    assert retrieve_chunks("specialist copay") == []  # not visible
 
 
 # --- vector post-filter (§3.4) ---
 
 @pytest.mark.integration
-def test_vector_search_post_filters_by_doc_id(ingest_env):
+def test_vector_search_post_filters_by_doc_id(offline_ingest_env):
     from tara.storage import vector
-    from tara.storage.db import connect
+    from tara.storage.db import connect_db
     from tests.conftest import fake_embed_one
 
-    dim = ingest_env.embed_dim
-    conn = connect()
+    dim = offline_ingest_env.embed_dim
+    conn = connect_db()
     try:
-        vector.load(conn)
+        vector.load_vector_extension(conn)
         # Two docs; both have a chunk whose text matches the query.
         for doc_id in ("docA", "docB"):
             conn.execute(
@@ -80,11 +80,11 @@ def test_vector_search_post_filters_by_doc_id(ingest_env):
                 "VALUES (?, ?, 1, 0, 5, 'copay')",
                 (cid, doc_id),
             )
-            vector.add(conn, cid, fake_embed_one("copay", dim))
+            vector.add_embedding(conn, cid, fake_embed_one("copay", dim))
         conn.commit()
 
         q = fake_embed_one("copay", dim)
-        allowed = vector.search(conn, q, k=5, doc_ids=["docA"])
+        allowed = vector.find_nearest_chunks(conn, q, k=5, doc_ids=["docA"])
         assert {cid for cid, _ in allowed} == {"docA:1:0"}  # docB filtered out
     finally:
         conn.close()
