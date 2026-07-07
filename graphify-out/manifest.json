@@ -8,8 +8,8 @@
     "hash": "9c96588e64e6c888176ecb5697478512"
   },
   "/Users/murtaza/temp/stuff/agentic_ai/tara_health/tests/eval_harness.py": {
-    "mtime": 1783400666.8657193,
-    "hash": "898979dc6ae29ec238b318bb9f31d85b"
+    "mtime": 1783402841.303236,
+    "hash": "635e4fc9702ec684ede8277a09fc6514"
   },
   "/Users/murtaza/temp/stuff/agentic_ai/tara_health/tests/test_safety.py": {
     "mtime": 1783400666.8660083,
@@ -1884,8 +1884,8 @@
     "hash": "6d3f1bfb915894838614d318ea8c3643"
   },
   "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/config.py": {
-    "mtime": 1783400666.8641791,
-    "hash": "ef7febadfb7a6f11e2d2e6acbe225fef"
+    "mtime": 1783402840.0374722,
+    "hash": "540c7766aa02970dc8fd0cc1d3619589"
   },
   "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/__init__.py": {
     "mtime": 1783400666.8644314,
@@ -2016,32 +2016,32 @@
     "hash": "f8e2ee406484a549b473976180cf69e8"
   },
   "/Users/murtaza/temp/stuff/agentic_ai/tara_health/CLAUDE.md": {
-    "mtime": 1783400688.6310008,
-    "hash": "3f2f6cba4da726e53eff389779df77e2"
+    "mtime": 1783402821.7895474,
+    "hash": "1e96fc89cd5b870ec5a0f1566b69ff39"
   },
-  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/docs/PHASE_4_TECHNICAL_DESIGN.md": {
-    "mtime": 1782685229.7401233,
-    "hash": "6a1776a99a23e16310ebc286b5907ad8"
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/docs/Epic4_portal_and_proactive.md": {
+    "mtime": 1783402767.3534737,
+    "hash": "859884cb5b6fbcb5ad4428da56c6c777"
   },
   "/Users/murtaza/temp/stuff/agentic_ai/tara_health/docs/OPEN_QUESTIONS.md": {
-    "mtime": 1782685207.6035464,
-    "hash": "a806900451ec23149abad3f018b24d55"
+    "mtime": 1783402837.701181,
+    "hash": "8dc87e09518f82924be4111c6f01a9fc"
   },
   "/Users/murtaza/temp/stuff/agentic_ai/tara_health/docs/PRD.md": {
-    "mtime": 1782682461.5859222,
-    "hash": "136e85e44cadb789a77ec2c7bff88a04"
+    "mtime": 1783402829.7033381,
+    "hash": "a637bc4a89579e6de42cca362c41312f"
   },
-  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/docs/PHASE_1_TECHNICAL_DESIGN.md": {
-    "mtime": 1783400690.9690762,
-    "hash": "593f50e20611ddf42f24976337e3c5b7"
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/docs/Epic1_grounded_qa.md": {
+    "mtime": 1783402535.4368176,
+    "hash": "b24c5e9102554f054a1de6b72fe967e5"
   },
-  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/docs/PHASE_3_TECHNICAL_DESIGN.md": {
-    "mtime": 1782685241.3394525,
-    "hash": "f157ec7ba50b5d6f676ee5992bc6f32d"
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/docs/Epic2_first_actions.md": {
+    "mtime": 1783402611.9076264,
+    "hash": "baaf8a4d6a13bf3d761a20c9c406454c"
   },
-  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/docs/PHASE_2_TECHNICAL_DESIGN.md": {
-    "mtime": 1782682186.3150003,
-    "hash": "1c6c9e27434d09d722927eb235b1bb1d"
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/docs/Epic3_external_actions.md": {
+    "mtime": 1783402691.4622858,
+    "hash": "bd5cd891c4b414913bb729860e0d3b81"
   },
   "/Users/murtaza/temp/stuff/agentic_ai/tara_health/ECC/CODE_OF_CONDUCT.md": {
     "mtime": 1782103171.3762984,
