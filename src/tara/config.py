@@ -1,8 +1,8 @@
 """Application configuration, loaded from environment / .env.
 
 All paths and model choices are centralized here so the rest of the code never
-hard-codes a provider or a directory (design §3.5: local-vs-hosted is config,
-never a code change). See PHASE_1_TECHNICAL_DESIGN.md.
+hard-codes a provider or a directory (Epic 1 M4: local-vs-hosted is config,
+never a code change). See docs/Epic1_grounded_qa.md.
 """
 from __future__ import annotations
 

@@ -2,9 +2,9 @@
 
 The design questions still open. Update as they get resolved — when a question is
 settled, **remove it here and record the decision in its canonical doc** (product
-decisions in [PRD.md](PRD.md), technical decisions in the phase technical-design
-docs, license in `LICENSE`). This file is not a decision log; it only tracks what's
-undecided.
+decisions in [PRD.md](PRD.md), technical decisions in the epic design docs
+(`Epic1_grounded_qa.md` … `Epic4_portal_and_proactive.md`), license in `LICENSE`).
+This file is not a decision log; it only tracks what's undecided.
 
 ---
 
@@ -13,7 +13,7 @@ The provider *mechanism* is settled (a `local` / `hosted` / `hybrid` config swit
 default `local` — see the technical design). What's still open is empirical: does
 the on-device model hold up for grounded medical/insurance reasoning, or do we need
 to default to `hybrid`/`hosted` for acceptable quality? **Resolve via the eval
-harness** (technical design §8 / build step 7) — measure citation correctness and
+harness** ([Epic1_grounded_qa.md](Epic1_grounded_qa.md) M8) — measure citation correctness and
 honesty for `local` vs `hosted` on the fixture set, then pick the default with
 evidence.
 
@@ -22,7 +22,7 @@ Framing is already decided (the README carries a disclaimer and `safety/framing.
 enforces "general information, not a diagnosis" on every answer). **Still open:** the
 explicit consent flow — what the user agrees to, and when — especially if this ever
 moves from personal project to product. (Proactive-feature consent is designed in
-[PHASE_4_TECHNICAL_DESIGN.md](PHASE_4_TECHNICAL_DESIGN.md) §3.5; the broader
+[Epic4_portal_and_proactive.md](Epic4_portal_and_proactive.md) M5; the broader
 product-level consent flow remains open.)
 
 ## 3. Productization triggers

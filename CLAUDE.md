@@ -6,12 +6,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 TaRa Health is a **local-first, single-profile AI health & insurance assistant**. The user uploads their own health/insurance documents and asks questions; "Tara" answers grounded in those documents with citations.
 
-**This repo is currently a Phase 1 scaffold.** Nearly every core function is an intentional `NotImplementedError` stub carrying a docstring and a `TODO` that specifies its contract. The structure, data models, and module boundaries are real and settled; the implementations are not yet filled in. When implementing, honor the contract described in each stub's docstring rather than redesigning the interface.
+**This repo is currently an Epic 1 scaffold.** Nearly every core function is an intentional `NotImplementedError` stub carrying a docstring and a `TODO` that specifies its contract. The structure, data models, and module boundaries are real and settled; the implementations are not yet filled in. When implementing, honor the contract described in each stub's docstring rather than redesigning the interface.
 
-- **Phase 1 scope (current):** read-only grounded Q&A over the user's documents — ingestion, retrieval, grounded+cited answering, and the safety layer.
-- **Out of scope until Phase 2+:** any agentic *action* (calendar, email, pharmacy, delivery). The README describes the eventual product; the code does not yet do actions.
+- **Epic 1 scope (current):** read-only grounded Q&A over the user's documents — ingestion, retrieval, grounded+cited answering, and the safety layer.
+- **Out of scope until Epic 2+:** any agentic *action* (calendar, email, pharmacy, delivery). The README describes the eventual product; the code does not yet do actions.
+- The roadmap is 4 **Epics** (top-level units, former "Phases"), each decomposed into numbered **Modules** (M1, M2, … — implementation-sized units, former "Slices").
 
-The authoritative spec is [docs/PHASE_1_TECHNICAL_DESIGN.md](docs/PHASE_1_TECHNICAL_DESIGN.md) — see its §11 "Repository layout" for the code-tree map. The Phase 2+ vision is designed (not yet built) in a phase-doc series: [PHASE_2](docs/PHASE_2_TECHNICAL_DESIGN.md) (calendar + reminders — also defines the shared agent/tool/confirmation-gate foundations), [PHASE_3](docs/PHASE_3_TECHNICAL_DESIGN.md) (email/delivery/pharmacy via assisted handoff), and [PHASE_4](docs/PHASE_4_TECHNICAL_DESIGN.md) (Epic on FHIR + proactive). Each phase doc is self-contained for that phase.
+The authoritative spec is [docs/Epic1_grounded_qa.md](docs/Epic1_grounded_qa.md) — see its "Repository layout" section for the code-tree map. The Epic 2+ vision is designed (not yet built) in an epic-doc series: [Epic 2](docs/Epic2_first_actions.md) (calendar + reminders — also defines the shared agent/tool/confirmation-gate foundations), [Epic 3](docs/Epic3_external_actions.md) (email/delivery/pharmacy via assisted handoff), and [Epic 4](docs/Epic4_portal_and_proactive.md) (Epic on FHIR + proactive). Each epic doc is self-contained for that epic.
 
 ## Commands
 
@@ -25,7 +26,7 @@ tara                             # run the local server at http://127.0.0.1:8000
 pytest                           # run tests
 pytest tests/test_safety.py      # single test file
 pytest tests/test_safety.py::test_emergencies_are_caught   # single test
-python tests/eval_harness.py     # Phase 1 eval metrics (retrieval/citation/honesty/safety/OCR)
+python tests/eval_harness.py     # Epic 1 eval metrics (retrieval/citation/honesty/safety/OCR)
 ruff check src tests             # lint
 mypy src                         # type-check
 ```
@@ -39,7 +40,7 @@ All configuration is centralized in [src/tara/config.py](src/tara/config.py) (`g
 **Two pipelines, defined in the design doc and mirrored by the module layout:**
 
 - **Ingestion** ([src/tara/document_ingestion/ingestion_pipeline.py](src/tara/document_ingestion/ingestion_pipeline.py)): `save blob → extract → classify → chunk → embed → index`. The pipeline orchestrates the other `document_ingestion/` modules plus `semantic_search/` and `local_data_stores/`.
-- **Answering** ([src/tara/question_answering/question_answerer.py](src/tara/question_answering/question_answerer.py)): `safety pre-check → retrieve → grounded+cited answer → safety framing`. This is the heart of Phase 1.
+- **Answering** ([src/tara/question_answering/question_answerer.py](src/tara/question_answering/question_answerer.py)): `safety pre-check → retrieve → grounded+cited answer → safety framing`. This is the heart of Epic 1.
 
 **Cross-cutting design constraints — preserve these when implementing:**
 
@@ -48,7 +49,7 @@ All configuration is centralized in [src/tara/config.py](src/tara/config.py) (`g
 - **Safety is deliberately separate from answering.** [src/tara/safety_checks/emergency_triage.py](src/tara/safety_checks/emergency_triage.py) runs an emergency pre-check *before* the answering model so it cannot be "reasoned away," and is biased toward over-triggering. [src/tara/safety_checks/answer_framing.py](src/tara/safety_checks/answer_framing.py) is a post-check on the answer. Test safety hardest.
 - **Storage is local SQLite + sqlite-vec, one module per concern.** [src/tara/local_data_stores/](src/tara/local_data_stores/): `db_connection.py` (pragmas, SQLCipher hook), `db_schema.py` (DDL), `document_records.py` + `chunk_records.py` (row operations — **all SQL for a table lives in its record module; no SQL outside `local_data_stores/`**), `embedding_index_meta.py` (model/dim drift guard), `vector_index.py` (the `vec0` virtual table, created separately because it needs the sqlite-vec extension loaded), `blob_store.py`, `document_purge.py`. Embedding dimension comes from config (`embed_dim`, must match `embed_model`).
 
-**Suggested build order** (from design doc §10, since stubs depend on each other): native-text PDF ingestion + retrieval first → grounded answering with "decline if unsupported" → citations → safety pre/post checks → OCR path for scans → doc classification + filtered retrieval → eval harness.
+**Suggested build order** (from the Epic 1 doc's "Build order" section, since stubs depend on each other): native-text PDF ingestion + retrieval first → grounded answering with "decline if unsupported" → citations → safety pre/post checks → OCR path for scans → doc classification + filtered retrieval → eval harness.
 
 ## Conventions
 
@@ -61,5 +62,6 @@ All configuration is centralized in [src/tara/config.py](src/tara/config.py) (`g
   3. No one-concept packages — a shared model or error type is a well-named root module (`data_models.py`, `app_errors.py`), not a `domain/`/`core/` bucket.
   4. Modules are noun phrases (`text_chunking.py`); functions are verb+object (`chunk_spans()`); no single-letter variables.
   5. Docstrings state purpose first, rationale second.
-- **Import direction:** kernel (`config`, `data_models`, `app_errors`, `upload_validation`) ← planes (`llm_clients`, `local_data_stores`) ← capabilities (`document_ingestion`, `semantic_search`, `question_answering`) ← `safety_checks`/agent packages ← `web_app.py`. Capabilities never import each other, except `question_answering → semantic_search` and `→ safety_checks` (design §5.2). Phase 2 code lands in `agent_orchestration/` and `agent_tools/` (names reserved in design §11).
+- **Import direction:** kernel (`config`, `data_models`, `app_errors`, `upload_validation`) ← planes (`llm_clients`, `local_data_stores`) ← capabilities (`document_ingestion`, `semantic_search`, `question_answering`) ← `safety_checks`/agent packages ← `web_app.py`. Capabilities never import each other, except `question_answering → semantic_search` and `→ safety_checks` (the Epic 1 query flow). Epic 2 code lands in `agent_orchestration/` and `agent_tools/` (names reserved in the Epic 1 repository layout).
 - This app handles sensitive PHI: keep processing on-device by default, log actions for auditability, and treat the hosted path as an explicit data-egress opt-in.
+- **Output format (all chat replies AND all files created):** use bulleted/numbered lists, never prose paragraphs. Allow at most a one-line lead-in before a list. Applies to docs, plans, and design docs too.

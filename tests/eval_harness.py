@@ -1,4 +1,4 @@
-"""Phase 1 evaluation harness (see PHASE_1_TECHNICAL_DESIGN.md §8):
+"""Epic 1 evaluation harness (see docs/Epic1_grounded_qa.md M8):
 
   - retrieval accuracy   (top-k hit rate on curated Q->chunk pairs)
   - citation correctness (does the cited page actually contain the fact?)
