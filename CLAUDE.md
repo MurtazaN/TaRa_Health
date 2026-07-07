@@ -38,21 +38,22 @@ All configuration is centralized in [src/tara/config.py](src/tara/config.py) (`g
 
 **Two pipelines, defined in the design doc and mirrored by the module layout:**
 
-- **Ingestion** ([src/tara/ingestion/pipeline.py](src/tara/ingestion/pipeline.py)): `save blob → extract → classify → chunk → embed → index`. The pipeline orchestrates the other `ingestion/` modules plus `embeddings/` and `storage/`.
-- **Answering** ([src/tara/answering/answerer.py](src/tara/answering/answerer.py)): `safety pre-check → retrieve → grounded+cited answer → safety framing`. This is the heart of Phase 1.
+- **Ingestion** ([src/tara/document_ingestion/ingestion_pipeline.py](src/tara/document_ingestion/ingestion_pipeline.py)): `save blob → extract → classify → chunk → embed → index`. The pipeline orchestrates the other `document_ingestion/` modules plus `text_embeddings/` and `storage/`.
+- **Answering** ([src/tara/question_answering/question_answerer.py](src/tara/question_answering/question_answerer.py)): `safety pre-check → retrieve → grounded+cited answer → safety framing`. This is the heart of Phase 1.
 
 **Cross-cutting design constraints — preserve these when implementing:**
 
 - **Citations depend on end-to-end provenance.** `extract_text_spans()` must preserve `(page, char_start, char_end)` for every span; `Chunk` carries that provenance; the answerer maps cited chunk IDs back to `Citation`. Don't drop position information anywhere in the chain or citations break.
-- **The LLM is an abstraction, not a hard dependency.** Everything talks to the `LLMClient` protocol in [src/tara/llm_clients/interface.py](src/tara/llm_clients/interface.py). `get_llm_client(prefer_hosted=...)` chooses a local backend (Ollama, or an OpenAI-compatible server such as LM Studio, per `local_backend`) vs hosted based on `model_mode` (`local` / `hosted` / `hybrid`). Local-vs-hosted is a config decision, never a code change. Default mode is `local` (private, offline); hosted means data leaves the device.
-- **Safety is deliberately separate from answering.** [src/tara/safety/triage.py](src/tara/safety/triage.py) runs an emergency pre-check *before* the answering model so it cannot be "reasoned away," and is biased toward over-triggering. [src/tara/safety/framing.py](src/tara/safety/framing.py) is a post-check on the answer. Test safety hardest.
-- **Storage is local SQLite + sqlite-vec.** [src/tara/storage/db.py](src/tara/storage/db.py) holds the relational schema (documents, chunks, queries); [src/tara/storage/vector.py](src/tara/storage/vector.py) holds the `vec0` virtual table keyed by `chunk_id`. The vector table is created separately from the main schema because it needs the sqlite-vec extension loaded. Embedding dimension comes from config (`embed_dim`, must match `embed_model`).
+- **The LLM is an abstraction, not a hard dependency.** Everything talks to the `LLMClient` protocol in [src/tara/llm_clients/interface.py](src/tara/llm_clients/interface.py). `get_llm_client(prefer_hosted=...)` chooses a local backend (Ollama, or an OpenAI-compatible server such as LM Studio, per `local_llm_backend`) vs hosted based on `model_mode` (`local` / `hosted` / `hybrid`). Local-vs-hosted is a config decision, never a code change. Default mode is `local` (private, offline); hosted means data leaves the device.
+- **Safety is deliberately separate from answering.** [src/tara/safety_checks/emergency_triage.py](src/tara/safety_checks/emergency_triage.py) runs an emergency pre-check *before* the answering model so it cannot be "reasoned away," and is biased toward over-triggering. [src/tara/safety_checks/answer_framing.py](src/tara/safety_checks/answer_framing.py) is a post-check on the answer. Test safety hardest.
+- **Storage is local SQLite + sqlite-vec.** [src/tara/storage/metadata_db.py](src/tara/storage/metadata_db.py) holds the relational schema (documents, chunks, queries); [src/tara/storage/vector_index.py](src/tara/storage/vector_index.py) holds the `vec0` virtual table keyed by `chunk_id`. The vector table is created separately from the main schema because it needs the sqlite-vec extension loaded. Embedding dimension comes from config (`embed_dim`, must match `embed_model`).
 
 **Suggested build order** (from design doc §10, since stubs depend on each other): native-text PDF ingestion + retrieval first → grounded answering with "decline if unsupported" → citations → safety pre/post checks → OCR path for scans → doc classification + filtered retrieval → eval harness.
 
 ## Conventions
 
 - Python 3.11+, `from __future__ import annotations` at the top of every module.
-- Package lives under `src/tara/` (src layout); the `tara` console script maps to `tara.app:main`.
-- Data models are dataclasses in [src/tara/storage/models.py](src/tara/storage/models.py); `DocType` is a closed `Literal` set.
+- Package lives under `src/tara/` (src layout); the `tara` console script maps to `tara.web_app:main`.
+- Data models are dataclasses in [src/tara/storage/data_models.py](src/tara/storage/data_models.py); `DocType` is a closed `Literal` set.
+- Naming: every folder, file, function, and variable name carries its object explicitly (`retrieve_chunks`, not `retrieve`; `llm_clients/`, not `llm/`). Module docstrings state purpose first, rationale second.
 - This app handles sensitive PHI: keep processing on-device by default, log actions for auditability, and treat the hosted path as an explicit data-egress opt-in.

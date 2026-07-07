@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import pytest
 
-from tara.retrieval.chunk_retriever import retrieve_chunks
+from tara.chunk_retrieval.chunk_retriever import retrieve_chunks
 
 
 @pytest.mark.integration
 def test_retrieve_returns_expected_chunk_with_provenance(offline_ingest_env, make_pdf):
-    from tara.ingestion.pipeline import ingest_document
+    from tara.document_ingestion.ingestion_pipeline import ingest_document
 
     ingest_document("policy.pdf", make_pdf([
         ["Specialist copay is $40 per visit."],
@@ -30,7 +30,7 @@ def test_retrieve_returns_expected_chunk_with_provenance(offline_ingest_env, mak
 
 @pytest.mark.integration
 def test_retrieve_abstains_on_unsupported_question(offline_ingest_env, make_pdf):
-    from tara.ingestion.pipeline import ingest_document
+    from tara.document_ingestion.ingestion_pipeline import ingest_document
 
     ingest_document("policy.pdf", make_pdf([["Specialist copay is $40 per visit."]]))
     # No overlap with any indexed text -> below the abstention threshold.
@@ -44,13 +44,13 @@ def test_retrieve_on_empty_index_returns_empty(offline_ingest_env):
 
 @pytest.mark.integration
 def test_failed_document_is_invisible_to_retrieval(offline_ingest_env, make_pdf, monkeypatch):
-    from tara.ingestion import pipeline
+    from tara.document_ingestion import ingestion_pipeline
 
     # Force a post-commit failure so a doc row exists but ends 'indexing_failed'.
-    monkeypatch.setattr(pipeline.vector, "add_embeddings",
+    monkeypatch.setattr(ingestion_pipeline.vector_index, "add_embeddings",
                         lambda conn, items: (_ for _ in ()).throw(RuntimeError("vec down")))
     with pytest.raises(RuntimeError):
-        pipeline.ingest_document("policy.pdf", make_pdf([["Specialist copay is $40 per visit."]]))
+        ingestion_pipeline.ingest_document("policy.pdf", make_pdf([["Specialist copay is $40 per visit."]]))
 
     assert retrieve_chunks("specialist copay") == []  # not visible
 
@@ -59,14 +59,14 @@ def test_failed_document_is_invisible_to_retrieval(offline_ingest_env, make_pdf,
 
 @pytest.mark.integration
 def test_vector_search_post_filters_by_doc_id(offline_ingest_env):
-    from tara.storage import vector
-    from tara.storage.db import connect_db
+    from tara.storage import vector_index
+    from tara.storage.metadata_db import connect_db
     from tests.conftest import fake_embed_one
 
     dim = offline_ingest_env.embed_dim
     conn = connect_db()
     try:
-        vector.load_vector_extension(conn)
+        vector_index.load_vector_extension(conn)
         # Two docs; both have a chunk whose text matches the query.
         for doc_id in ("docA", "docB"):
             conn.execute(
@@ -80,11 +80,11 @@ def test_vector_search_post_filters_by_doc_id(offline_ingest_env):
                 "VALUES (?, ?, 1, 0, 5, 'copay')",
                 (cid, doc_id),
             )
-            vector.add_embedding(conn, cid, fake_embed_one("copay", dim))
+            vector_index.add_embedding(conn, cid, fake_embed_one("copay", dim))
         conn.commit()
 
         q = fake_embed_one("copay", dim)
-        allowed = vector.find_nearest_chunks(conn, q, k=5, doc_ids=["docA"])
+        allowed = vector_index.find_nearest_chunks(conn, q, max_results=5, doc_ids=["docA"])
         assert {cid for cid, _ in allowed} == {"docA:1:0"}  # docB filtered out
     finally:
         conn.close()

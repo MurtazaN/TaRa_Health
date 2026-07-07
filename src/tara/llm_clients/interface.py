@@ -26,16 +26,16 @@ def get_llm_client(prefer_hosted: bool = False) -> "LLMClient":
     - "hosted" -> the hosted client (data egresses)
     - "hybrid" -> local unless `prefer_hosted` (the per-query opt-in)
 
-    TODO (Slice 2): route "local" by config.local_backend — OllamaClient vs the
+    TODO (Slice 2): route "local" by config.local_llm_backend — OllamaClient vs the
     OpenAI-compatible client (LM Studio). Until then local always means Ollama.
     """
     from tara.config import get_settings
     from tara.llm_clients.hosted_client import HostedLLMClient
     from tara.llm_clients.ollama_client import OllamaClient
 
-    mode = get_settings().model_mode
-    if mode == "hosted":
+    model_mode = get_settings().model_mode
+    if model_mode == "hosted":
         return HostedLLMClient()
-    if mode == "hybrid" and prefer_hosted:
+    if model_mode == "hybrid" and prefer_hosted:
         return HostedLLMClient()
     return OllamaClient()

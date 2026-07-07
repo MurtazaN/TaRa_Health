@@ -1,17 +1,17 @@
 """Slice 1 ingestion: boundary validation, position-preserving extraction,
-page-bounded deterministic chunking, and the transactional/idempotent pipeline."""
+page-bounded deterministic chunking, and the transactional/idempotent ingestion_pipeline."""
 from __future__ import annotations
 
 import sqlite3
 
 import pytest
 
-from tara.ingestion.chunk import chunk_spans
-from tara.ingestion.detect import SourceKind, detect_source_kind
-from tara.ingestion.extract import extract_text_spans, page_canonical_text
-from tara.storage import vector
-from tara.storage.db import connect_db
-from tara.validation import UploadError, validate_upload
+from tara.document_ingestion.text_chunking import chunk_spans
+from tara.document_ingestion.source_kind_detection import SourceKind, detect_source_kind
+from tara.document_ingestion.text_extraction import extract_text_spans, page_canonical_text
+from tara.storage import vector_index
+from tara.storage.metadata_db import connect_db
+from tara.upload_validation import UploadError, validate_upload
 
 
 # --- detect / boundary validation (§3.1a) ---
@@ -87,7 +87,7 @@ def test_chunk_is_page_bounded_and_deterministic(make_pdf, tmp_path):
     path.write_bytes(data)
     spans = extract_text_spans(path)
 
-    chunks = chunk_spans("docABC", spans, target_tokens=1000, overlap=0)
+    chunks = chunk_spans("docABC", spans, target_tokens=1000, overlap_tokens=0)
     # No chunk spans two pages.
     assert all(c.page in (1, 2) for c in chunks)
     # Deterministic ids of the form "{doc}:{page}:{char_start}".
@@ -97,7 +97,7 @@ def test_chunk_is_page_bounded_and_deterministic(make_pdf, tmp_path):
     for c in chunks:
         assert by_page[c.page][c.char_start:c.char_end] == c.text
     # Same inputs -> same ids (idempotent).
-    again = chunk_spans("docABC", spans, target_tokens=1000, overlap=0)
+    again = chunk_spans("docABC", spans, target_tokens=1000, overlap_tokens=0)
     assert [c.chunk_id for c in chunks] == [d.chunk_id for d in again]
 
 
@@ -107,17 +107,17 @@ def test_chunk_splits_large_pages(make_pdf, tmp_path):
     path = tmp_path / "big.pdf"
     path.write_bytes(make_pdf([lines]))
     spans = extract_text_spans(path)
-    chunks = chunk_spans("d", spans, target_tokens=20, overlap=0)
+    chunks = chunk_spans("d", spans, target_tokens=20, overlap_tokens=0)
     assert len(chunks) > 1  # a big page produced multiple chunks
     assert all(c.page == 1 for c in chunks)
     assert len({c.chunk_id for c in chunks}) == len(chunks)  # unique ids
 
 
-# --- pipeline: transactional + idempotent (§3.1f, §3.1g) ---
+# --- ingestion_pipeline: transactional + idempotent (§3.1f, §3.1g) ---
 
 @pytest.mark.integration
 def test_ingest_indexes_document_with_chunks_and_vectors(offline_ingest_env, make_pdf):
-    from tara.ingestion.pipeline import ingest_document
+    from tara.document_ingestion.ingestion_pipeline import ingest_document
 
     doc = ingest_document("policy.pdf", make_pdf([["Specialist copay is $40 per visit."]]))
     assert doc.status == "indexed"
@@ -126,7 +126,7 @@ def test_ingest_indexes_document_with_chunks_and_vectors(offline_ingest_env, mak
 
     conn = connect_db()
     try:
-        vector.load_vector_extension(conn)  # vec0 is per-connection
+        vector_index.load_vector_extension(conn)  # vec0 is per-connection
         assert conn.execute("SELECT COUNT(*) FROM documents").fetchone()[0] == 1
         n_chunks = conn.execute("SELECT COUNT(*) FROM chunks").fetchone()[0]
         n_vecs = conn.execute("SELECT COUNT(*) FROM vec_chunks").fetchone()[0]
@@ -137,7 +137,7 @@ def test_ingest_indexes_document_with_chunks_and_vectors(offline_ingest_env, mak
 
 @pytest.mark.integration
 def test_reingest_same_file_is_deduped(offline_ingest_env, make_pdf):
-    from tara.ingestion.pipeline import ingest_document
+    from tara.document_ingestion.ingestion_pipeline import ingest_document
 
     data = make_pdf([["Specialist copay is $40 per visit."]])
     first = ingest_document("policy.pdf", data)
@@ -153,8 +153,8 @@ def test_reingest_same_file_is_deduped(offline_ingest_env, make_pdf):
 
 @pytest.mark.integration
 def test_purge_removes_rows_vectors_and_blob(offline_ingest_env, make_pdf):
-    from tara.ingestion.pipeline import ingest_document
-    from tara.storage.purge import purge_document
+    from tara.document_ingestion.ingestion_pipeline import ingest_document
+    from tara.storage.document_purge import purge_document
 
     doc = ingest_document("policy.pdf", make_pdf([["Specialist copay is $40 per visit."]]))
     blob_dir = offline_ingest_env.blob_dir
@@ -164,7 +164,7 @@ def test_purge_removes_rows_vectors_and_blob(offline_ingest_env, make_pdf):
 
     conn = connect_db()
     try:
-        vector.load_vector_extension(conn)  # vec0 is per-connection
+        vector_index.load_vector_extension(conn)  # vec0 is per-connection
         assert conn.execute("SELECT COUNT(*) FROM documents").fetchone()[0] == 0
         assert conn.execute("SELECT COUNT(*) FROM chunks").fetchone()[0] == 0
         assert conn.execute("SELECT COUNT(*) FROM vec_chunks").fetchone()[0] == 0
@@ -176,11 +176,11 @@ def test_purge_removes_rows_vectors_and_blob(offline_ingest_env, make_pdf):
 
 @pytest.mark.integration
 def test_failed_extraction_cleans_up_blob_and_leaves_no_indexed_doc(offline_ingest_env, make_pdf, monkeypatch):
-    from tara.ingestion import pipeline
+    from tara.document_ingestion import ingestion_pipeline
 
-    monkeypatch.setattr(pipeline, "extract_text_spans", lambda path: (_ for _ in ()).throw(RuntimeError("boom")))
+    monkeypatch.setattr(ingestion_pipeline, "extract_text_spans", lambda path: (_ for _ in ()).throw(RuntimeError("boom")))
     with pytest.raises(RuntimeError, match="boom"):
-        pipeline.ingest_document("policy.pdf", make_pdf([["Specialist copay is $40."]]))
+        ingestion_pipeline.ingest_document("policy.pdf", make_pdf([["Specialist copay is $40."]]))
 
     conn = connect_db()
     try:
@@ -195,20 +195,20 @@ def test_failed_extraction_cleans_up_blob_and_leaves_no_indexed_doc(offline_inge
 
 @pytest.mark.integration
 def test_replace_failure_preserves_prior_document(offline_ingest_env, make_pdf, monkeypatch):
-    from tara.ingestion import pipeline
+    from tara.document_ingestion import ingestion_pipeline
 
     data = make_pdf([["Specialist copay is $40 per visit."]])
-    original = pipeline.ingest_document("policy.pdf", data)
+    original = ingestion_pipeline.ingest_document("policy.pdf", data)
 
     # Re-index the same file, but embedding fails part-way through.
-    monkeypatch.setattr(pipeline.text_embedder, "embed_texts",
+    monkeypatch.setattr(ingestion_pipeline.text_embedder, "embed_texts",
                         lambda texts: (_ for _ in ()).throw(RuntimeError("embed down")))
     with pytest.raises(RuntimeError, match="embed down"):
-        pipeline.ingest_document("policy.pdf", data, replace=True)
+        ingestion_pipeline.ingest_document("policy.pdf", data, replace=True)
 
     conn = connect_db()
     try:
-        vector.load_vector_extension(conn)
+        vector_index.load_vector_extension(conn)
         row = conn.execute("SELECT status FROM documents WHERE doc_id=?", (original.doc_id,)).fetchone()
         assert row is not None and row["status"] == "indexed"  # prior version intact
         assert conn.execute("SELECT COUNT(*) FROM vec_chunks").fetchone()[0] > 0  # vectors kept
@@ -218,7 +218,7 @@ def test_replace_failure_preserves_prior_document(offline_ingest_env, make_pdf, 
 
 @pytest.mark.integration
 def test_replace_reindexes_same_file(offline_ingest_env, make_pdf):
-    from tara.ingestion.pipeline import ingest_document
+    from tara.document_ingestion.ingestion_pipeline import ingest_document
 
     data = make_pdf([["Specialist copay is $40 per visit."]])
     first = ingest_document("policy.pdf", data)
@@ -271,7 +271,7 @@ def test_content_hash_unique_among_indexed_only(offline_ingest_env):
 @pytest.mark.unit
 def test_pdf_page_cap_rejects_oversized(make_pdf, tmp_path, monkeypatch):
     from tara import config
-    from tara.ingestion.detect import detect_source_kind
+    from tara.document_ingestion.source_kind_detection import detect_source_kind
 
     monkeypatch.setenv("TARA_DATA_DIR", str(tmp_path / "d"))
     monkeypatch.setenv("TARA_MAX_PDF_PAGES", "1")
@@ -287,8 +287,8 @@ def test_pdf_page_cap_rejects_oversized(make_pdf, tmp_path, monkeypatch):
 
 @pytest.mark.integration
 def test_reconcile_removes_orphan_blobs_only(offline_ingest_env, make_pdf):
-    from tara.ingestion.pipeline import ingest_document
-    from tara.storage.purge import reconcile_orphan_blobs
+    from tara.document_ingestion.ingestion_pipeline import ingest_document
+    from tara.storage.document_purge import reconcile_orphan_blobs
 
     doc = ingest_document("policy.pdf", make_pdf([["Specialist copay is $40 per visit."]]))
     orphan = offline_ingest_env.blob_dir / "deadbeefdeadbeef.pdf"

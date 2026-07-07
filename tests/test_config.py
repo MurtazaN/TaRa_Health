@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from tara.config import Settings, ensure_dirs
+from tara.config import Settings, ensure_data_dirs
 
 
 def _settings(**overrides) -> Settings:
@@ -64,7 +64,7 @@ def test_get_settings_is_cached_and_side_effect_free(tmp_path, monkeypatch):
         s2 = config.get_settings()
         assert s1 is s2  # cached
         assert not data_dir.exists()  # factory created no directories
-        ensure_dirs(s1)
+        ensure_data_dirs(s1)
         assert (data_dir / "blobs").exists()  # explicit call does
     finally:
         config.get_settings.cache_clear()

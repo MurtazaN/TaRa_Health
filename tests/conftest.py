@@ -34,7 +34,7 @@ def isolated_env(tmp_path, monkeypatch):
     monkeypatch.setenv("TARA_MODEL_MODE", "local")
     config.get_settings.cache_clear()
     settings = config.get_settings()
-    config.ensure_dirs(settings)
+    config.ensure_data_dirs(settings)
     yield settings
     config.get_settings.cache_clear()
 
@@ -73,16 +73,16 @@ def make_pdf():
 def offline_ingest_env(tmp_path, monkeypatch):
     """Isolated store + initialized schema + a deterministic offline text_embedder."""
     from tara import config
-    from tara.embeddings import text_embedder
-    from tara.storage.db import connect_db, init_db_schema
-    from tara.storage.vector import init_vector_table
+    from tara.text_embeddings import text_embedder
+    from tara.storage.metadata_db import connect_db, init_db_schema
+    from tara.storage.vector_index import init_vector_table
 
     monkeypatch.setenv("TARA_DATA_DIR", str(tmp_path / "data"))
     monkeypatch.setenv("TARA_MODEL_MODE", "local")
     monkeypatch.setenv("TARA_EMBED_DIM", "256")
     config.get_settings.cache_clear()
     settings = config.get_settings()
-    config.ensure_dirs(settings)
+    config.ensure_data_dirs(settings)
 
     dim = settings.embed_dim
     monkeypatch.setattr(text_embedder, "embed_texts", lambda texts: [fake_embed_one(t, dim) for t in texts])

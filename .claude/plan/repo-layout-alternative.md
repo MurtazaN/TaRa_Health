@@ -1,6 +1,6 @@
 # Alternative repository layout (proposal vs design doc §11)
 
-**Status:** draft for review — nothing moved yet.
+**Status:** partially superseded (2026-07-07) — the naming pass renamed all folders/files IN PLACE (document_ingestion/, chunk_retrieval/, text_embeddings/, question_answering/, safety_checks/, storage file renames, web_app.py). What remains open from this proposal is only the STRUCTURAL regroup: domain/ kernel, documents/+search/ feature merge, error consolidation.
 **Scope:** the whole `src/tara/` tree, not just `storage/`.
 **Prompted by:** naming/cohesion review after Slice 1 (see the rename pass already
 applied: `tara/validation.py`, `vector.load_extension`/`add_embeddings`, `chunk_spans`).

@@ -8,7 +8,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from tara.embeddings import text_embedder
+from tara.text_embeddings import text_embedder
 
 
 @dataclass

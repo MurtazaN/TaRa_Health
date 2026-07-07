@@ -2,7 +2,7 @@
 
 Runs fully on-device — no data leaves the machine. One of the two local
 backends (the other is an OpenAI-compatible server such as LM Studio; which one
-`get_llm_client` uses is chosen by config.local_backend).
+`get_llm_client` uses is chosen by config.local_llm_backend).
 """
 from __future__ import annotations
 
@@ -16,8 +16,8 @@ class OllamaClient:
 
     def generate(self, system_prompt: str, user_prompt: str) -> str:
         settings = get_settings()
-        client = ollama.Client(host=settings.ollama_host)
-        response = client.chat(
+        ollama_api_client = ollama.Client(host=settings.ollama_host)
+        response = ollama_api_client.chat(
             model=settings.local_model,
             messages=[
                 {"role": "system", "content": system_prompt},

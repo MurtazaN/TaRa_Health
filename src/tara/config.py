@@ -16,7 +16,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # 50 MB upload ceiling (§3.1a); a malformed/oversized upload fails fast.
 _DEFAULT_MAX_UPLOAD_BYTES = 50 * 1024 * 1024
 
-LocalBackend = Literal["ollama", "openai_compatible"]
+LocalLLMBackend = Literal["ollama", "openai_compatible"]
 
 
 class Settings(BaseSettings):
@@ -30,10 +30,10 @@ class Settings(BaseSettings):
     model_mode: Literal["local", "hosted", "hybrid"] = "local"
 
     # ---- Local model ----
-    # Two on-device backends are supported, chosen by `local_backend`:
+    # Two on-device backends are supported, chosen by `local_llm_backend`:
     #   - "ollama"            -> Ollama at `ollama_host`
     #   - "openai_compatible" -> an OpenAI-style server (e.g. LM Studio) at `lmstudio_host`
-    local_backend: LocalBackend = "openai_compatible"
+    local_llm_backend: LocalLLMBackend = "openai_compatible"
     ollama_host: str = "http://localhost:11434"
     lmstudio_host: str = "http://localhost:1234"  # OpenAI-compatible base; "/v1" is appended
     local_model: str = "qwen3:8b"
@@ -108,13 +108,13 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     """Return the cached Settings. Side-effect free: creating directories is done
-    explicitly via `ensure_dirs()` so the cache doesn't hide filesystem writes."""
+    explicitly via `ensure_data_dirs()` so the cache doesn't hide filesystem writes."""
     return Settings()
 
 
-def ensure_dirs(settings: Settings | None = None) -> None:
+def ensure_data_dirs(settings: Settings | None = None) -> None:
     """Create the on-device storage directories, owner-only (PHI on disk). Call
     once at startup / before first write. Idempotent."""
-    s = settings or get_settings()
-    for directory in (s.data_dir, s.blob_dir):
+    resolved_settings = settings or get_settings()
+    for directory in (resolved_settings.data_dir, resolved_settings.blob_dir):
         directory.mkdir(parents=True, exist_ok=True, mode=0o700)

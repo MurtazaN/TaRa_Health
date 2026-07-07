@@ -2,8 +2,8 @@
 
     python scripts/init_db.py
 """
-from tara.storage.db import connect_db, init_db_schema
-from tara.storage.vector import init_vector_table
+from tara.storage.metadata_db import connect_db, init_db_schema
+from tara.storage.vector_index import init_vector_table
 
 
 def main() -> None:

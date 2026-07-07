@@ -487,14 +487,14 @@ tara-health/
 ├── .env.example            # config: model mode, paths, models, api key, limits
 ├── src/tara/
 │   ├── config.py           # central settings (paths, model mode, embed model, api key, limits, timeouts)
-│   ├── app.py              # FastAPI: /upload, /ask (body), / (UI)
-│   ├── ingestion/          # detect → extract(+spans) → classify → chunk → pipeline (§3.1)
-│   ├── embeddings/         # local sentence-transformers (§3.1e)
-│   ├── storage/            # sqlite + sqlite-vec + blobs, purge, SQLCipher-ready (§3.2)
-│   ├── retrieval/          # embed query → doc-type filter → post-filtered search → abstain (§3.4)
+│   ├── web_app.py          # FastAPI: /upload, /ask (body), / (UI); `tara` entry point
+│   ├── document_ingestion/ # source detection → text extraction(+spans) → classification → chunking → pipeline (§3.1)
+│   ├── text_embeddings/    # local text→vector embedding via OpenAI-compatible endpoint (§3.1e)
+│   ├── storage/            # metadata_db + vector_index + blob_store + document_purge, SQLCipher-ready (§3.2)
+│   ├── chunk_retrieval/    # embed question → doc-type filter → post-filtered search → abstain (§3.4)
 │   ├── llm_clients/        # interface + ollama_client + hosted_client (hybrid switch) (§3.5)
-│   ├── safety/             # triage (pre-check, fail-closed) + framing (post-check) (§3.3)
-│   ├── answering/          # prompts + answerer — full query flow incl. numeric grounding (§5.2, §6)
+│   ├── safety_checks/      # emergency triage (pre-check, fail-closed) + answer framing (post-check) (§3.3)
+│   ├── question_answering/ # answer prompts + question answerer — full query flow incl. numeric grounding (§5.2, §6)
 │   └── web/                # placeholder UI
 ├── scripts/init_db.py      # create schema + vector table + index_meta
 └── tests/                  # ingestion/retrieval/safety + eval_harness (§8)
