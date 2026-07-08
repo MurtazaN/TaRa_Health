@@ -1,7 +1,8 @@
-"""Schema + connection contracts (design §3.2, §4): the schema builds, the new
-v0.3 columns/tables exist, and the ON DELETE CASCADE actually fires (which only
-happens with PRAGMA foreign_keys = ON)."""
+"""Schema + connection contracts: tables build, foreign-key cascade fires, and
+the partial-unique content_hash index blocks duplicate indexed documents."""
 from __future__ import annotations
+
+import sqlite3
 
 import pytest
 
@@ -14,7 +15,7 @@ def _columns(conn, table: str) -> set[str]:
 
 
 @pytest.mark.integration
-def test_schema_builds_with_v03_columns(isolated_env):
+def test_schema_builds_with_all_contract_columns(isolated_env):
     init_db_schema()
     conn = connect_db()
     try:
@@ -26,7 +27,7 @@ def test_schema_builds_with_v03_columns(isolated_env):
 
 
 @pytest.mark.integration
-def test_connect_enables_foreign_keys(isolated_env):
+def test_connect_db_enables_foreign_keys(isolated_env):
     conn = connect_db()
     try:
         assert conn.execute("PRAGMA foreign_keys").fetchone()[0] == 1
@@ -55,5 +56,35 @@ def test_document_delete_cascades_to_chunks(isolated_env):
 
         remaining = conn.execute("SELECT COUNT(*) FROM chunks").fetchone()[0]
         assert remaining == 0  # cascade fired
+    finally:
+        conn.close()
+
+
+@pytest.mark.integration
+def test_content_hash_unique_among_indexed_only(isolated_env):
+    init_db_schema()
+    conn = connect_db()
+    try:
+        conn.execute(
+            "INSERT INTO documents (doc_id, filename, content_hash, status, uploaded_at) "
+            "VALUES ('a', 'a.pdf', 'HASH', 'indexed', '2026-01-01T00:00:00+00:00')"
+        )
+        conn.commit()
+        with pytest.raises(sqlite3.IntegrityError):
+            conn.execute(
+                "INSERT INTO documents (doc_id, filename, content_hash, status, uploaded_at) "
+                "VALUES ('b', 'b.pdf', 'HASH', 'indexed', '2026-01-01T00:00:00+00:00')"
+            )
+        conn.rollback()
+        # Two *failed* attempts with the same hash are allowed (retry not blocked).
+        conn.execute(
+            "INSERT INTO documents (doc_id, filename, content_hash, status, uploaded_at) "
+            "VALUES ('c', 'c.pdf', 'H2', 'indexing_failed', '2026-01-01T00:00:00+00:00')"
+        )
+        conn.execute(
+            "INSERT INTO documents (doc_id, filename, content_hash, status, uploaded_at) "
+            "VALUES ('d', 'd.pdf', 'H2', 'indexing_failed', '2026-01-01T00:00:00+00:00')"
+        )
+        conn.commit()
     finally:
         conn.close()

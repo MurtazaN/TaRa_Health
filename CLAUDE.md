@@ -24,8 +24,8 @@ python scripts/initialize_data_stores.py        # create SQLite schema + sqlite-
 tara                             # run the local server at http://127.0.0.1:8000
 
 pytest                           # run tests
-pytest tests/test_safety.py      # single test file
-pytest tests/test_safety.py::test_emergencies_are_caught   # single test
+pytest tests/safety_checks/test_emergency_triage.py   # single test file
+pytest tests/safety_checks/test_emergency_triage.py::test_emergencies_are_caught  # single test
 python tests/eval_harness.py     # Epic 1 eval metrics (retrieval/citation/honesty/safety/OCR)
 ruff check src tests             # lint
 mypy src                         # type-check

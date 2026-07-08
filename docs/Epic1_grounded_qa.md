@@ -524,7 +524,8 @@ tara-health/
 │   └── web_ui/                  # templates + static for the local UI
 │   # reserved for Epic 2 (created when the code exists): agent_orchestration/, agent_tools/
 ├── scripts/initialize_data_stores.py   # create schema + vector table + index_meta
-└── tests/                       # unit + integration; behavior_evals/ lands with M8
+└── tests/                       # MIRRORS src/tara: one test module per source module
+                                 #   (tests/<package>/test_<module>.py); behavior_evals/ lands with M8
 ```
 
 - **Import direction (enforceable rule):** kernel ← planes ← capabilities ← safety/agent packages ← web_app.
