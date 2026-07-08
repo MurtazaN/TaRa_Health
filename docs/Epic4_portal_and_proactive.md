@@ -5,7 +5,7 @@
   - Tara reads structured clinical data directly from the user's provider (then, later, writes back appointment scheduling).
   - Tara begins to act **unprompted** — preparing for upcoming visits and following up afterward.
 - Both are powerful and both raise new consent/safety surfaces — Epic 4 is as much about *guardrails on proactivity* as about the integration.
-- **Builds on:** [Epic1_grounded_qa.md](Epic1_grounded_qa.md) (ingestion, retrieval, grounded+cited answering, safety pre-check) and [Epic2_first_actions.md](Epic2_first_actions.md) / [Epic3_external_actions.md](Epic3_external_actions.md). Reused unchanged:
+- **Builds on:** [epic1_grounded_qa/](epic1_grounded_qa/README.md) (ingestion, retrieval, grounded+cited answering, safety pre-check) and [Epic2_first_actions.md](Epic2_first_actions.md) / [Epic3_external_actions.md](Epic3_external_actions.md). Reused unchanged:
   - **Orchestrator/planner, tool protocol, confirmation gate, action audit + idempotency, OAuth/secret storage** (Epic 2 M1).
   - **Assisted-handoff** tool kind and **financial/heightened confirmation** (Epic 3 M1) — reused for scheduling where direct write-back isn't available.
   - **Epic 1 retrieval + citations** — FHIR-sourced facts flow back into the same grounded-answer pipeline so they can be cited like any document.

@@ -12,7 +12,7 @@ TaRa Health is a **local-first, single-profile AI health & insurance assistant**
 - **Out of scope until Epic 2+:** any agentic *action* (calendar, email, pharmacy, delivery). The README describes the eventual product; the code does not yet do actions.
 - The roadmap is 4 **Epics** (top-level units, former "Phases"), each decomposed into numbered **Modules** (M1, M2, … — implementation-sized units, former "Slices").
 
-The authoritative spec is [docs/Epic1_grounded_qa.md](docs/Epic1_grounded_qa.md) — see its "Repository layout" section for the code-tree map. The Epic 2+ vision is designed (not yet built) in an epic-doc series: [Epic 2](docs/Epic2_first_actions.md) (calendar + reminders — also defines the shared agent/tool/confirmation-gate foundations), [Epic 3](docs/Epic3_external_actions.md) (email/delivery/pharmacy via assisted handoff), and [Epic 4](docs/Epic4_portal_and_proactive.md) (Epic on FHIR + proactive). Each epic doc is self-contained for that epic.
+The authoritative spec is [docs/epic1_grounded_qa/](docs/epic1_grounded_qa/README.md) — an overview README (goals, architecture, build order, cross-cutting safety/privacy, repository layout) plus one contract doc per module (`M1_ingestion_pipeline.md` … `M8_eval_harness.md`); when implementing or reviewing a module, load its module doc. The Epic 2+ vision is designed (not yet built) in an epic-doc series: [Epic 2](docs/Epic2_first_actions.md) (calendar + reminders — also defines the shared agent/tool/confirmation-gate foundations), [Epic 3](docs/Epic3_external_actions.md) (email/delivery/pharmacy via assisted handoff), and [Epic 4](docs/Epic4_portal_and_proactive.md) (Epic on FHIR + proactive). Each epic doc is self-contained for that epic.
 
 ## Commands
 

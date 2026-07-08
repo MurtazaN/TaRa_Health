@@ -1,7 +1,7 @@
 # Epic 1 Implementation Plan (for review) *(formerly "Phase 1"; Slices renamed Modules)*
 
 > Plan only — no code yet beyond the noted progress. Spec is
-> [docs/Epic1_grounded_qa.md](../../docs/Epic1_grounded_qa.md) (content = design **v0.3**);
+> [docs/epic1_grounded_qa/](../../docs/epic1_grounded_qa/README.md) (content = design **v0.3**; one doc per design module M1–M8);
 > honor the v0.3 contracts (the scaffold stubs don't reflect them yet). Build order
 > follows the Epic 1 doc's "Build order" section. Workflow: **TDD** (red → green →
 > refactor), ruff + mypy clean, ≥80% coverage on touched modules, `code-reviewer`

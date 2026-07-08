@@ -2,7 +2,7 @@
 
 All paths and model choices are centralized here so the rest of the code never
 hard-codes a provider or a directory (Epic 1 M4: local-vs-hosted is config,
-never a code change). See docs/Epic1_grounded_qa.md.
+never a code change). See docs/epic1_grounded_qa/M4_grounded_answering.md.
 """
 from __future__ import annotations
 

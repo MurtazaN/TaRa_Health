@@ -173,7 +173,7 @@ action and hands the user a link/draft) before becoming fully automated.
 
 - The roadmap is 4 **Epics** (former "Phases"), each decomposed into numbered **Modules** in its design doc:
 
-1. **Epic 1 — Grounded Q&A (read-only).** Upload, parse, RAG, cite. No actions. Safety layer in place. *(See [Epic1_grounded_qa.md](Epic1_grounded_qa.md).)*
+1. **Epic 1 — Grounded Q&A (read-only).** Upload, parse, RAG, cite. No actions. Safety layer in place. *(See [epic1_grounded_qa/](epic1_grounded_qa/README.md) — overview + one doc per module.)*
 2. **Epic 2 — First actions.** Calendar + reminders (lowest-risk, no money/PHI leaving the system; calendar has an official MCP server). *(See [Epic2_first_actions.md](Epic2_first_actions.md) — also defines the shared orchestrator/tool/confirmation-gate foundations.)*
 3. **Epic 3 — External actions.** Insurance email drafting, delivery/commerce, pharmacy refills — all behind the confirmation gate, starting as assisted handoffs. *(See [Epic3_external_actions.md](Epic3_external_actions.md).)*
 4. **Epic 4 — Health-portal & proactive help.** Epic on FHIR (read, then scheduling); proactive prep and follow-ups. *(See [Epic4_portal_and_proactive.md](Epic4_portal_and_proactive.md).)*

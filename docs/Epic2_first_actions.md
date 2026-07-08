@@ -2,7 +2,7 @@
 
 - **Epic 2 scope:** Tara's **first actions** — calendar and reminders; TaRa stops being read-only and starts *doing* things, always behind a confirmation gate.
 - Calendar + reminders are deliberately first: lowest-risk actions — no money moves, no PHI leaves the system beyond the event/reminder text the user already supplied.
-- **Builds on:** [Epic1_grounded_qa.md](Epic1_grounded_qa.md) — ingestion, retrieval, grounded answering, and (critically) the safety pre-check (Epic 1 M5), which still runs first on every turn.
+- **Builds on:** [epic1_grounded_qa/](epic1_grounded_qa/README.md) — ingestion, retrieval, grounded answering, and (critically) the safety pre-check ([Epic 1 M5](epic1_grounded_qa/M5_safety.md)), which still runs first on every turn.
 - **Introduces (reused by Epics 3–4):** the agent **orchestrator**, the **tool protocol**, the **confirmation gate**, the **action audit + idempotency** layer, and **OAuth/secret storage** — all in **M1** below. Later epics reference M1 rather than re-specifying it.
 - **Status:** Draft v0.1 (content), restructured Phase→Epic / Modules 2026-07-07.
 - **Last updated:** 2026-07-07.

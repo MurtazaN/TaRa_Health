@@ -3,7 +3,7 @@
 The design questions still open. Update as they get resolved — when a question is
 settled, **remove it here and record the decision in its canonical doc** (product
 decisions in [PRD.md](PRD.md), technical decisions in the epic design docs
-(`Epic1_grounded_qa.md` … `Epic4_portal_and_proactive.md`), license in `LICENSE`).
+(`epic1_grounded_qa/` module docs, `Epic2` … `Epic4` docs), license in `LICENSE`).
 This file is not a decision log; it only tracks what's undecided.
 
 ---
@@ -13,7 +13,7 @@ The provider *mechanism* is settled (a `local` / `hosted` / `hybrid` config swit
 default `local` — see the technical design). What's still open is empirical: does
 the on-device model hold up for grounded medical/insurance reasoning, or do we need
 to default to `hybrid`/`hosted` for acceptable quality? **Resolve via the eval
-harness** ([Epic1_grounded_qa.md](Epic1_grounded_qa.md) M8) — measure citation correctness and
+harness** ([epic1_grounded_qa/M8_eval_harness.md](epic1_grounded_qa/M8_eval_harness.md)) — measure citation correctness and
 honesty for `local` vs `hosted` on the fixture set, then pick the default with
 evidence.
 
