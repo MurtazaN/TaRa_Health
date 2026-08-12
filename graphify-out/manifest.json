@@ -1,0 +1,318 @@
+{
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/tests/test_web_app.py": {
+    "mtime": 1783464914.0483706,
+    "hash": "b3ce8587fa83bc8c28a62769c093e5a1"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/tests/conftest.py": {
+    "mtime": 1783400764.6413515,
+    "hash": "fa08a7e0dcf70ea099c6bdfb9a9a6722"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/tests/eval_harness.py": {
+    "mtime": 1783493558.263028,
+    "hash": "8df9687d4dc8da234f6452387f0d14ef"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/tests/__init__.py": {
+    "mtime": 1783400666.8663101,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/tests/test_upload_validation.py": {
+    "mtime": 1783464831.1366603,
+    "hash": "127638e375bb0200e7d757eb232c61fe"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/tests/test_config.py": {
+    "mtime": 1783400666.8678174,
+    "hash": "5e2fff6b9121692e83eb07b536e25dde"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/tests/local_data_stores/test_document_purge.py": {
+    "mtime": 1783464914.0393717,
+    "hash": "e140e59403d636f98dee68eec6e2a2c9"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/tests/local_data_stores/__init__.py": {
+    "mtime": 1783461067.5861812,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/tests/local_data_stores/test_document_records.py": {
+    "mtime": 1783464914.0217261,
+    "hash": "c9f81fb2e6d28cb5b39d4f1f6b6e0a8f"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/tests/local_data_stores/test_db_schema.py": {
+    "mtime": 1783464914.0171015,
+    "hash": "c4ff5d42efbad6a4bdde8b974cdb9c57"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/tests/local_data_stores/test_vector_index.py": {
+    "mtime": 1783464914.0364501,
+    "hash": "332668d85f80fd68e9a66e2930bc25d1"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/tests/local_data_stores/test_embedding_index_meta.py": {
+    "mtime": 1783464914.033012,
+    "hash": "f51cc8123c99fdd70b9f32091a4e7d1f"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/tests/local_data_stores/test_blob_store.py": {
+    "mtime": 1783464914.029187,
+    "hash": "609b600cb06aff22e1c2dd01a227ab55"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/tests/local_data_stores/test_chunk_records.py": {
+    "mtime": 1783464914.0252414,
+    "hash": "e3c6ca043faad856ca799c04814c62b4"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/tests/document_ingestion/test_text_chunking.py": {
+    "mtime": 1783464831.1444986,
+    "hash": "7db5cbeee755eec004cdcd4b0d572bef"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/tests/document_ingestion/test_ingestion_pipeline.py": {
+    "mtime": 1783464831.1473193,
+    "hash": "18878326b696f7b03741250b07df5e2d"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/tests/document_ingestion/__init__.py": {
+    "mtime": 1783461067.5812702,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/tests/document_ingestion/test_text_extraction.py": {
+    "mtime": 1783464831.1418326,
+    "hash": "a1653d0cb83e61c06d07a02894f13f0f"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/tests/document_ingestion/test_source_kind_detection.py": {
+    "mtime": 1783464831.1395288,
+    "hash": "a27ab0870ce6b0184b8cdf0896822c6f"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/tests/semantic_search/test_chunk_retriever.py": {
+    "mtime": 1783464914.0419652,
+    "hash": "bae2f9ba623fc9cb6ddba85fc5ca922a"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/tests/semantic_search/__init__.py": {
+    "mtime": 1783461067.5838475,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/tests/semantic_search/test_text_embedder.py": {
+    "mtime": 1783400666.8668783,
+    "hash": "ba066cd5902214c2339417b29603e856"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/tests/safety_checks/__init__.py": {
+    "mtime": 1783461067.5908453,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/tests/safety_checks/test_emergency_triage.py": {
+    "mtime": 1783400666.8660083,
+    "hash": "faaece460f5d1ba171151fe57fd4e451"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/tests/llm_clients/test_llm_client_interface.py": {
+    "mtime": 1783464914.0454493,
+    "hash": "28c9ac9824f1706180c57c94973ba6d1"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/tests/llm_clients/__init__.py": {
+    "mtime": 1783461067.5885363,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/scripts/initialize_data_stores.py": {
+    "mtime": 1783400666.8684855,
+    "hash": "9cdebd7a78b35cc492194951883058c2"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/app_errors.py": {
+    "mtime": 1783400666.8630307,
+    "hash": "a8d237d99ebdb04fb8e7aac4e6371997"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/web_app.py": {
+    "mtime": 1783400683.3370209,
+    "hash": "ecdd15b855c15a1780777c4dd3f4c517"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/upload_validation.py": {
+    "mtime": 1783400666.8637953,
+    "hash": "6d3f1bfb915894838614d318ea8c3643"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/config.py": {
+    "mtime": 1783493579.55736,
+    "hash": "37d7df586d404ad25bcc1676652962f9"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/__init__.py": {
+    "mtime": 1783400666.8644314,
+    "hash": "e4738a27ecfd69e72373f485117f7ea2"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/data_models.py": {
+    "mtime": 1783400666.8647337,
+    "hash": "34e7824b4924e09bc330cd74b50bad03"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/question_answering/__init__.py": {
+    "mtime": 1783400666.8686833,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/question_answering/answer_prompts.py": {
+    "mtime": 1783400666.8690984,
+    "hash": "309b2710c0a0a86fe4be2cf58bc90729"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/question_answering/question_answerer.py": {
+    "mtime": 1783400666.869489,
+    "hash": "d55704612c04bc883aa6b6998e59dd9b"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/local_data_stores/vector_index.py": {
+    "mtime": 1783400666.8697894,
+    "hash": "37827100ce82be5de8108e0e6f3bdf96"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/local_data_stores/blob_store.py": {
+    "mtime": 1783400666.869998,
+    "hash": "ae6ce0560227e7f76d138aa77efad9d4"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/local_data_stores/embedding_index_meta.py": {
+    "mtime": 1783400666.8702464,
+    "hash": "50f5b19c5d374202e715e3318c806a33"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/local_data_stores/__init__.py": {
+    "mtime": 1783400666.8703861,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/local_data_stores/document_records.py": {
+    "mtime": 1783400666.8707137,
+    "hash": "36b8c05d15010efa470186d232d59664"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/local_data_stores/db_schema.py": {
+    "mtime": 1783400666.8710105,
+    "hash": "f49a2f4ae18eb3d6dbdee93120ce0c11"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/local_data_stores/db_connection.py": {
+    "mtime": 1783400666.8716404,
+    "hash": "61cd3972e69c82321e0d403704a51c54"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/local_data_stores/chunk_records.py": {
+    "mtime": 1783400666.8719444,
+    "hash": "abe3505a8ddcba497d80b91c60912201"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/local_data_stores/document_purge.py": {
+    "mtime": 1783400666.872254,
+    "hash": "b7a8eb41701d62ee91263fcaf2efb5bd"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/document_ingestion/text_chunking.py": {
+    "mtime": 1783400666.8725991,
+    "hash": "d7145f022311908e7be1d2dfc5171878"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/document_ingestion/text_extraction.py": {
+    "mtime": 1783400666.873294,
+    "hash": "3a101b9898f910d90da7e1ef0f8e4bca"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/document_ingestion/source_kind_detection.py": {
+    "mtime": 1783400666.8737168,
+    "hash": "dfa624e90cf6cd0bd0a88a29743c0903"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/document_ingestion/__init__.py": {
+    "mtime": 1783400666.8739479,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/document_ingestion/document_classification.py": {
+    "mtime": 1783400666.8745677,
+    "hash": "9762c09fa84ef0751230603315d1141e"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/document_ingestion/ingestion_pipeline.py": {
+    "mtime": 1783400666.8749568,
+    "hash": "fb5b7e952e45b61e0da50f9b97928c98"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/web_ui/static/app.js": {
+    "mtime": 1782033234.0,
+    "hash": "b7ea10639b5313c8ac9c9f23a5a7af2b"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/semantic_search/__init__.py": {
+    "mtime": 1783400666.8751447,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/semantic_search/chunk_retriever.py": {
+    "mtime": 1783400666.8755558,
+    "hash": "2c2727823c021c78bd6a756bfd989b7f"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/semantic_search/text_embedder.py": {
+    "mtime": 1783400666.8759375,
+    "hash": "db4f2d9336780d1ebb67a08b913bb814"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/safety_checks/__init__.py": {
+    "mtime": 1783400666.87612,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/safety_checks/answer_framing.py": {
+    "mtime": 1783400666.876563,
+    "hash": "3c3141e864c1bc26ac44c091793b6188"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/safety_checks/emergency_triage.py": {
+    "mtime": 1783400666.876992,
+    "hash": "244032bf1ea3dcd0df8302032a1ad6a1"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/llm_clients/ollama_client.py": {
+    "mtime": 1783400666.8775008,
+    "hash": "aa8c014789c7b38a6beb98368d6fa554"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/llm_clients/__init__.py": {
+    "mtime": 1783400666.877792,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/llm_clients/llm_client_interface.py": {
+    "mtime": 1783400666.878329,
+    "hash": "1150a577ad45fc7e60ea77e9df5e60f0"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/llm_clients/hosted_client.py": {
+    "mtime": 1783400666.8785672,
+    "hash": "38c27cc425c913b9269b0458f136e50d"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/README.md": {
+    "mtime": 1783399012.301071,
+    "hash": "f8e2ee406484a549b473976180cf69e8"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/CLAUDE.md": {
+    "mtime": 1783493546.5175836,
+    "hash": "dfddf276a7ca0c9bf150558bf3f33d90"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/docs/Epic4_portal_and_proactive.md": {
+    "mtime": 1783493576.6956995,
+    "hash": "ca4d0cf4ef524027ac8f4c4ce3f63204"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/docs/OPEN_QUESTIONS.md": {
+    "mtime": 1783493565.4793544,
+    "hash": "f741488aeb110b195c5653242ee0a61b"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/docs/PRD.md": {
+    "mtime": 1783493568.5828469,
+    "hash": "f9321fe03f31e484644fbcd950ee9eef"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/docs/Epic2_first_actions.md": {
+    "mtime": 1783493572.333121,
+    "hash": "c609061d12a92b0ef19703de2681ff18"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/docs/Epic3_external_actions.md": {
+    "mtime": 1783402691.4622858,
+    "hash": "bd5cd891c4b414913bb729860e0d3b81"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/docs/epic1_grounded_qa/M2_local_storage.md": {
+    "mtime": 1783493518.1754572,
+    "hash": "ee725c85c4724ac8640af04bdaf911c6"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/docs/epic1_grounded_qa/M5_safety.md": {
+    "mtime": 1783493518.1758263,
+    "hash": "67de9ec67473e77886ae299e2a10dbbf"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/docs/epic1_grounded_qa/M1_ingestion_pipeline.md": {
+    "mtime": 1783493518.1752603,
+    "hash": "7845bb8ddce305f0f913f9bde3f283fd"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/docs/epic1_grounded_qa/M7_classification.md": {
+    "mtime": 1783493518.1760063,
+    "hash": "ac0a536e377976aafbadc519a6097396"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/docs/epic1_grounded_qa/README.md": {
+    "mtime": 1783493706.6775248,
+    "hash": "a3f5a052e81f6df21f5da28eb4172b30"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/docs/epic1_grounded_qa/M4_grounded_answering.md": {
+    "mtime": 1783493518.1757317,
+    "hash": "8e0113f0ecb1f9c5b58994d887b07101"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/docs/epic1_grounded_qa/M6_ocr.md": {
+    "mtime": 1783493518.1759207,
+    "hash": "d3d50c4c73b52efa7c4f73b53dc5fc56"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/docs/epic1_grounded_qa/M8_eval_harness.md": {
+    "mtime": 1783493518.1760921,
+    "hash": "8cf264bb3379a5ba55818dd8b4ef91f3"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/docs/epic1_grounded_qa/M3_retrieval.md": {
+    "mtime": 1783493518.1755657,
+    "hash": "78fa3190988f7aabcc8ec0f0ff36f21e"
+  },
+  "/Users/murtaza/temp/stuff/agentic_ai/tara_health/src/tara/web_ui/templates/index.html": {
+    "mtime": 1782033234.0,
+    "hash": "4cd186955bd20465462d6bd30d839186"
+  }
+}
