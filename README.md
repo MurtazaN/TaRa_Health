@@ -80,7 +80,7 @@ ollama pull qwen3:8b
 cp .env.example .env
 
 # Create the SQLite schema + sqlite-vec table (run once)
-python scripts/init_db.py
+python scripts/initialize_data_stores.py
 
 # Run the local server at http://127.0.0.1:8000
 tara

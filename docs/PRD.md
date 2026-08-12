@@ -169,15 +169,14 @@ action and hands the user a link/draft) before becoming fully automated.
 
 ---
 
-## 11. Phased Roadmap
+## 11. Roadmap (Epics)
 
-**Phase 1 — Grounded Q&A (read-only).** Upload, parse, RAG, cite. No actions. Safety layer in place. *(See PHASE_1_TECHNICAL_DESIGN.md.)*
+- The roadmap is 4 **Epics** (former "Phases"), each decomposed into numbered **Modules** in its design doc:
 
-**Phase 2 — First actions.** Calendar + reminders (lowest-risk, no money/PHI leaving the system; calendar has an official MCP server). *(See [PHASE_2_TECHNICAL_DESIGN.md](PHASE_2_TECHNICAL_DESIGN.md) — also defines the shared orchestrator/tool/confirmation-gate foundations.)*
-
-**Phase 3 — External actions.** Insurance email drafting, delivery/commerce, pharmacy refills — all behind the confirmation gate, starting as assisted handoffs. *(See [PHASE_3_TECHNICAL_DESIGN.md](PHASE_3_TECHNICAL_DESIGN.md).)*
-
-**Phase 4 — Health-portal & proactive help.** Epic on FHIR (read, then scheduling); proactive prep and follow-ups. *(See [PHASE_4_TECHNICAL_DESIGN.md](PHASE_4_TECHNICAL_DESIGN.md).)*
+1. **Epic 1 — Grounded Q&A (read-only).** Upload, parse, RAG, cite. No actions. Safety layer in place. *(See [epic1_grounded_qa/](epic1_grounded_qa/README.md) — overview + one doc per module.)*
+2. **Epic 2 — First actions.** Calendar + reminders (lowest-risk, no money/PHI leaving the system; calendar has an official MCP server). *(See [Epic2_first_actions.md](Epic2_first_actions.md) — also defines the shared orchestrator/tool/confirmation-gate foundations.)*
+3. **Epic 3 — External actions.** Insurance email drafting, delivery/commerce, pharmacy refills — all behind the confirmation gate, starting as assisted handoffs. *(See [Epic3_external_actions.md](Epic3_external_actions.md).)*
+4. **Epic 4 — Health-portal & proactive help.** Epic on FHIR (read, then scheduling); proactive prep and follow-ups. *(See [Epic4_portal_and_proactive.md](Epic4_portal_and_proactive.md).)*
 
 ---
 
