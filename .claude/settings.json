@@ -1,5 +1,6 @@
 {
   "enabledPlugins": {
     "ecc@ecc": false
-  }
+  },
+  "cleanupPeriodDays": 3650
 }
