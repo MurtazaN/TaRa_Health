@@ -93,7 +93,7 @@ def main() -> None:
     finally:
         conn.close()
     reconcile_orphan_blobs()  # sweep PHI blobs orphaned by an interrupted delete (§7)
-    uvicorn.run("tara.web_app:app", host="127.0.0.1", port=8000, reload=False)
+    uvicorn.run("tara.web_app:app", host=get_settings().server_host, port=8000, reload=False)
 
 
 if __name__ == "__main__":

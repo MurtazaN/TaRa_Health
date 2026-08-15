@@ -39,6 +39,14 @@ class Settings(BaseSettings):
     # its location is configuration — the container mounts it elsewhere.
     frontend_dir: Path = Field(default=_REPO_ROOT / "frontend")
 
+    # ---- Local server bind address ----
+    # Loopback by default: this app holds PHI and must not be reachable from the
+    # network unless the operator deliberately opts in. A container sets this to
+    # "0.0.0.0" because Docker's published port forwards to the bridge interface,
+    # which a loopback-only bind can never receive; there, Docker mediates exposure.
+    # Do NOT set this to "0.0.0.0" when running directly on a host.
+    server_host: str = "127.0.0.1"
+
     # ---- Model mode (§3.5) ----
     model_mode: Literal["local", "hosted", "hybrid"] = "local"
 
