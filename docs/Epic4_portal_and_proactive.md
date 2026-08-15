@@ -307,7 +307,7 @@ profile (extends Epics 2/3)
 - Names follow the settled Epic 1/2 conventions (`agent_tools/`, `document_ingestion/`, `local_data_stores/`).
 
 ```
-src/tara/
+backend/src/tara/
 ├── agent_tools/
 │   └── health_portal.py         # NEW: Epic on FHIR (SMART OAuth2) read + scheduling write-back/handoff (M1, M3)
 ├── document_ingestion/
