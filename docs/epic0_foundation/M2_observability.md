@@ -903,6 +903,7 @@ Epic 1 M4 alongside it."
 - Phoenix listens on 6006 for the user interface and OTLP over HTTP, and on 4317 for OTLP over gRPC. This project uses the HTTP exporter, so 6006 is the one that matters.
 - From inside the backend container the endpoint is `http://phoenix:6006/v1/traces`; from the host it is `http://localhost:6006/v1/traces`.
 - Because `/ask` cannot run until M5, **the end-to-end verification uses `/upload`**, which works today.
+- **Publish loopback-only**, the same fix Epic 0 M1's final-review fix wave applies to the backend service (F1): Phoenix will hold span data derived from health documents, and an all-interfaces publish (`"6006:6006"`) would expose it to anyone on the local network. Recorded here so the fix is not re-litigated when this task is actually built.
 
 - [ ] **Step 1: Add the Phoenix service**
 
@@ -912,8 +913,8 @@ In `deployment/docker/compose.yaml`, add to `services`:
   phoenix:
     image: arizephoenix/phoenix:latest
     ports:
-      - "6006:6006"   # UI + OTLP over HTTP
-      - "4317:4317"   # OTLP over gRPC
+      - "127.0.0.1:6006:6006"   # UI + OTLP over HTTP; loopback-only, same reasoning as the backend service
+      - "127.0.0.1:4317:4317"   # OTLP over gRPC; loopback-only
     volumes:
       - phoenix-data:/mnt/data
 ```

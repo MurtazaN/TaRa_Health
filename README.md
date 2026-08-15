@@ -65,6 +65,11 @@ your device by default, and the app serves one user (you).
 
 ## Getting started
 
+**Prerequisites:**
+
+- [`uv`](https://docs.astral.sh/uv/) installed (used to create the venv and install dependencies)
+- LM Studio (or Ollama) running locally, with the model named in `TARA_LOCAL_MODEL` loaded
+
 ```bash
 # Clone
 git clone https://github.com/<you>/<repo>.git

@@ -8,6 +8,11 @@ cd "$REPO_ROOT"
 echo "==> Creating virtualenv (if absent)"
 [ -d .venv ] || uv venv
 
+# Later steps (initialize_data_stores.py) need the venv's interpreter and
+# installed packages, not the system python; `uv pip install` alone does not
+# put .venv/bin first on PATH.
+source .venv/bin/activate
+
 echo "==> Installing backend with dev extras"
 uv pip install -e "./backend[dev]"
 

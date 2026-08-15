@@ -3,6 +3,8 @@ Read-only — there are no action endpoints yet (that's Phase 2+).
 """
 from __future__ import annotations
 
+import warnings
+
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -93,7 +95,20 @@ def main() -> None:
     finally:
         conn.close()
     reconcile_orphan_blobs()  # sweep PHI blobs orphaned by an interrupted delete (§7)
-    uvicorn.run("tara.web_app:app", host=get_settings().server_host, port=8000, reload=False)
+
+    bind_host = get_settings().server_host
+    if bind_host != "127.0.0.1":
+        # The one setting that widens PHI exposure gets its own guard, since a
+        # code comment in config.py can only warn passively. This is a bare
+        # host process, not the container - Docker is not here to mediate.
+        warnings.warn(
+            f"TARA_SERVER_HOST is '{bind_host}', not the loopback default. "
+            "This app has no authentication and serves PHI; binding beyond "
+            "127.0.0.1 exposes it to the network.",
+            stacklevel=2,
+        )
+
+    uvicorn.run("tara.web_app:app", host=bind_host, port=8000, reload=False)
 
 
 if __name__ == "__main__":

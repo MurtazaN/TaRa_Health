@@ -202,6 +202,7 @@ tara-health/
 │   └── local/bootstrap.sh        # one-command dev setup (venv, install, .env, data stores)
 ├── .github/workflows/ci.yml      # lint + typecheck + test on push/PR
 ├── Makefile                      # install/lint/typecheck/test/eval/run/up/down targets
+├── .dockerignore                 # depth-independent excludes for the docker build context
 └── .env.example                  # config: model mode, paths, models, api key, limits
 ```
 

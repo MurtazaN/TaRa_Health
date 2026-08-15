@@ -48,4 +48,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: docker build -f deployment/docker/Dockerfile.backend -t tara-backend:ci .
+      - run: make build

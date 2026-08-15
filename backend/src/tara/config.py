@@ -33,7 +33,10 @@ class Settings(BaseSettings):
     )
 
     # ---- Storage (local-first) ----
-    data_dir: Path = Field(default=Path("./.tara_data"))
+    # Repo-anchored, not CWD-relative: every entry point (Makefile, bootstrap.sh)
+    # changes the working directory to backend/ before running, so a relative
+    # default would silently relocate an existing user's store.
+    data_dir: Path = Field(default=_REPO_ROOT / ".tara_data")
     db_key: str = Field(default="")  # SQLCipher passphrase; empty => unencrypted (dev only)
     # The user interface lives outside the Python package (monorepo layout), so
     # its location is configuration — the container mounts it elsewhere.

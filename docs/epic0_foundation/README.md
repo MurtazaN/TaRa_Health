@@ -114,16 +114,17 @@
 | # | Setting | Default | Lands in |
 |---|---|---|---|
 | 1 | `TARA_FRONTEND_DIR` | `<repo>/frontend` | Epic 0 M1 |
-| 2 | `TARA_TRACING_ENABLED` | `false` | Epic 0 M2 |
-| 3 | `TARA_OTLP_ENDPOINT` | `http://localhost:6006/v1/traces` | Epic 0 M2 |
-| 4 | `TARA_SERVICE_NAME` | `tara-backend` | Epic 0 M2 |
-| 5 | `TARA_PHI_REDACTION_ENABLED` | `true` | Epic 0 M2 |
-| 6 | `TARA_PHI_REDACTION_NLP_MODEL` | `en_core_web_sm` | Epic 0 M2 |
-| 7 | `TARA_RERANK_ENABLED` | `false` until calibrated | Epic 1 M3 |
-| 8 | `TARA_RERANK_MODEL` | `BAAI/bge-reranker-v2-m3` | Epic 1 M3 |
-| 9 | `TARA_RERANK_CANDIDATE_MULTIPLIER` | `4` | Epic 1 M3 |
-| 10 | `TARA_RERANK_ABSTAIN_THRESHOLD` | Unset until calibrated | Epic 1 M3 |
-| 11 | `TARA_HAZARD_CLASSIFIER_MODEL` | Empty; keyword-only | Epic 1 M5 |
+| 2 | `TARA_SERVER_HOST` | `127.0.0.1` | Epic 0 M1 |
+| 3 | `TARA_TRACING_ENABLED` | `false` | Epic 0 M2 |
+| 4 | `TARA_OTLP_ENDPOINT` | `http://localhost:6006/v1/traces` | Epic 0 M2 |
+| 5 | `TARA_SERVICE_NAME` | `tara-backend` | Epic 0 M2 |
+| 6 | `TARA_PHI_REDACTION_ENABLED` | `true` | Epic 0 M2 |
+| 7 | `TARA_PHI_REDACTION_NLP_MODEL` | `en_core_web_sm` | Epic 0 M2 |
+| 8 | `TARA_RERANK_ENABLED` | `false` until calibrated | Epic 1 M3 |
+| 9 | `TARA_RERANK_MODEL` | `BAAI/bge-reranker-v2-m3` | Epic 1 M3 |
+| 10 | `TARA_RERANK_CANDIDATE_MULTIPLIER` | `4` | Epic 1 M3 |
+| 11 | `TARA_RERANK_ABSTAIN_THRESHOLD` | Unset until calibrated | Epic 1 M3 |
+| 12 | `TARA_HAZARD_CLASSIFIER_MODEL` | Empty; keyword-only | Epic 1 M5 |
 
 ## 8. Containers and CI
 

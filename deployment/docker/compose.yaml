@@ -1,12 +1,15 @@
 # Two services. LM Studio deliberately stays on the HOST - it needs direct
 # graphics-hardware access - and the backend reaches it via host.docker.internal.
+name: tara
 services:
   tara-backend:
     build:
       context: ../..
       dockerfile: deployment/docker/Dockerfile.backend
     ports:
-      - "8000:8000"
+      # Loopback-only publish. The app has no authentication and serves PHI;
+      # binding all host interfaces would expose it to the local network.
+      - "127.0.0.1:8000:8000"
     environment:
       TARA_LMSTUDIO_HOST: "http://host.docker.internal:1234"
       TARA_OLLAMA_HOST: "http://host.docker.internal:11434"

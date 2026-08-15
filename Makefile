@@ -1,7 +1,9 @@
-.PHONY: install lint typecheck test eval run up down logs clean
+.PHONY: install lint typecheck test eval run build up down logs clean
 
 BACKEND := backend
 COMPOSE := docker compose -f deployment/docker/compose.yaml
+DOCKERFILE := deployment/docker/Dockerfile.backend
+IMAGE := tara-backend:ci
 
 install:  ## Install the backend with dev tooling
 	uv pip install -e "./$(BACKEND)[dev]"
@@ -20,6 +22,9 @@ eval:  ## DeepEval quality gate. LOCAL ONLY - needs LM Studio running.
 
 run:  ## Run the local server on the host
 	cd $(BACKEND) && python -m tara.web_app
+
+build:  ## Build the backend image. CI runs this same target, so the two cannot drift.
+	docker build -f $(DOCKERFILE) -t $(IMAGE) .
 
 up:  ## Start the containerized stack
 	$(COMPOSE) up -d
