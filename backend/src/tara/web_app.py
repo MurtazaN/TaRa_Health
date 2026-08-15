@@ -3,8 +3,6 @@ Read-only — there are no action endpoints yet (that's Phase 2+).
 """
 from __future__ import annotations
 
-from pathlib import Path
-
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -12,6 +10,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
 from tara.app_errors import IndexMismatchError, IngestionError, UploadError
+from tara.config import get_settings
 from tara.document_ingestion.ingestion_pipeline import ingest_document
 from tara.question_answering.question_answerer import answer_question
 
@@ -41,9 +40,11 @@ class AskRequest(BaseModel):
     question: str
     prefer_hosted: bool = False
 
-_web_dir = Path(__file__).parent / "web_ui"
-templates = Jinja2Templates(directory=str(_web_dir / "templates"))
-app.mount("/static", StaticFiles(directory=str(_web_dir / "static")), name="static")
+# Templates and static assets share one directory in the monorepo layout;
+# index.html references "/static/app.js", so the mount keeps that URL working.
+_frontend_dir = get_settings().frontend_dir
+templates = Jinja2Templates(directory=str(_frontend_dir))
+app.mount("/static", StaticFiles(directory=str(_frontend_dir)), name="static")
 
 
 @app.get("/", response_class=HTMLResponse)
