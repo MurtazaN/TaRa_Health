@@ -23,45 +23,43 @@ The Epic 2+ vision is designed (not yet built) in an epic-doc series: [Epic 2](d
 ## Commands
 
 ```bash
-pip install -e ".[dev]"          # install with dev tools (pytest, ruff, mypy)
-ollama pull qwen3:8b             # pull the local model named in .env (TARA_LOCAL_MODEL)
-cp .env.example .env             # configure model mode, paths, models
-python scripts/initialize_data_stores.py        # create SQLite schema + sqlite-vec table (run once)
-tara                             # run the local server at http://127.0.0.1:8000
+./deployment/local/bootstrap.sh   # one-command setup (venv, install, .env, data stores)
+make install                      # install backend with dev tools
+make test                         # run tests
+make lint                         # ruff
+make typecheck                    # mypy
+make run                          # local server at http://127.0.0.1:8000
+make up / make down               # containerized stack
+make eval                         # DeepEval gate (local only; needs LM Studio)
 
-pytest                           # run tests
-pytest tests/safety_checks/test_emergency_triage.py   # single test file
-pytest tests/safety_checks/test_emergency_triage.py::test_emergencies_are_caught  # single test
-python tests/eval_harness.py     # Epic 1 eval metrics (retrieval/citation/honesty/safety/OCR)
-ruff check src tests             # lint
-mypy src                         # type-check
+cd backend && python -m pytest tests/safety_checks/test_emergency_triage.py   # single file
 ```
 
-Optional encrypted-at-rest storage: `pip install -e ".[encryption]"` (pulls SQLCipher, which needs a system lib — kept optional so the default install works out of the box).
+Optional encrypted-at-rest storage: `pip install -e "./backend[encryption]"` (pulls SQLCipher, which needs a system lib — kept optional so the default install works out of the box).
 
 ## Architecture
 
-All configuration is centralized in [src/tara/config.py](src/tara/config.py) (`get_settings()`, env-prefixed `TARA_`). Code never hard-codes a provider, model, or directory — it reads from settings.
+All configuration is centralized in [backend/src/tara/config.py](backend/src/tara/config.py) (`get_settings()`, env-prefixed `TARA_`). Code never hard-codes a provider, model, or directory — it reads from settings.
 
 **Two pipelines, defined in the design doc and mirrored by the module layout:**
 
-- **Ingestion** ([src/tara/document_ingestion/ingestion_pipeline.py](src/tara/document_ingestion/ingestion_pipeline.py)): `save blob → extract → classify → chunk → embed → index`. The pipeline orchestrates the other `document_ingestion/` modules plus `semantic_search/` and `local_data_stores/`.
-- **Answering** ([src/tara/question_answering/question_answerer.py](src/tara/question_answering/question_answerer.py)): `safety pre-check → retrieve → grounded+cited answer → safety framing`. This is the heart of Epic 1.
+- **Ingestion** ([backend/src/tara/document_ingestion/ingestion_pipeline.py](backend/src/tara/document_ingestion/ingestion_pipeline.py)): `save blob → extract → classify → chunk → embed → index`. The pipeline orchestrates the other `document_ingestion/` modules plus `semantic_search/` and `local_data_stores/`.
+- **Answering** ([backend/src/tara/question_answering/question_answerer.py](backend/src/tara/question_answering/question_answerer.py)): `safety pre-check → retrieve → grounded+cited answer → safety framing`. This is the heart of Epic 1.
 
 **Cross-cutting design constraints — preserve these when implementing:**
 
 - **Citations depend on end-to-end provenance.** `extract_text_spans()` must preserve `(page, char_start, char_end)` for every span; `Chunk` carries that provenance; the answerer maps cited chunk IDs back to `Citation`. Don't drop position information anywhere in the chain or citations break.
-- **The LLM is an abstraction, not a hard dependency.** Everything talks to the `LLMClient` protocol in [src/tara/llm_clients/llm_client_interface.py](src/tara/llm_clients/llm_client_interface.py). `get_llm_client(prefer_hosted=...)` chooses a local backend (Ollama, or an OpenAI-compatible server such as LM Studio, per `local_llm_backend`) vs hosted based on `model_mode` (`local` / `hosted` / `hybrid`). Local-vs-hosted is a config decision, never a code change. Default mode is `local` (private, offline); hosted means data leaves the device.
-- **Safety is deliberately separate from answering.** [src/tara/safety_checks/emergency_triage.py](src/tara/safety_checks/emergency_triage.py) runs an emergency pre-check *before* the answering model so it cannot be "reasoned away," and is biased toward over-triggering. [src/tara/safety_checks/answer_framing.py](src/tara/safety_checks/answer_framing.py) is a post-check on the answer. Test safety hardest.
-- **Storage is local SQLite + sqlite-vec, one module per concern.** [src/tara/local_data_stores/](src/tara/local_data_stores/): `db_connection.py` (pragmas, SQLCipher hook), `db_schema.py` (DDL), `document_records.py` + `chunk_records.py` (row operations — **all SQL for a table lives in its record module; no SQL outside `local_data_stores/`**), `embedding_index_meta.py` (model/dim drift guard), `vector_index.py` (the `vec0` virtual table, created separately because it needs the sqlite-vec extension loaded), `blob_store.py`, `document_purge.py`. Embedding dimension comes from config (`embed_dim`, must match `embed_model`).
+- **The LLM is an abstraction, not a hard dependency.** Everything talks to the `LLMClient` protocol in [backend/src/tara/llm_clients/llm_client_interface.py](backend/src/tara/llm_clients/llm_client_interface.py). `get_llm_client(prefer_hosted=...)` chooses a local backend (Ollama, or an OpenAI-compatible server such as LM Studio, per `local_llm_backend`) vs hosted based on `model_mode` (`local` / `hosted` / `hybrid`). Local-vs-hosted is a config decision, never a code change. Default mode is `local` (private, offline); hosted means data leaves the device.
+- **Safety is deliberately separate from answering.** [backend/src/tara/safety_checks/emergency_triage.py](backend/src/tara/safety_checks/emergency_triage.py) runs an emergency pre-check *before* the answering model so it cannot be "reasoned away," and is biased toward over-triggering. [backend/src/tara/safety_checks/answer_framing.py](backend/src/tara/safety_checks/answer_framing.py) is a post-check on the answer. Test safety hardest.
+- **Storage is local SQLite + sqlite-vec, one module per concern.** [backend/src/tara/local_data_stores/](backend/src/tara/local_data_stores/): `db_connection.py` (pragmas, SQLCipher hook), `db_schema.py` (DDL), `document_records.py` + `chunk_records.py` (row operations — **all SQL for a table lives in its record module; no SQL outside `local_data_stores/`**), `embedding_index_meta.py` (model/dim drift guard), `vector_index.py` (the `vec0` virtual table, created separately because it needs the sqlite-vec extension loaded), `blob_store.py`, `document_purge.py`. Embedding dimension comes from config (`embed_dim`, must match `embed_model`).
 
 **Suggested build order** (from the Epic 1 doc's "Build order" section, since stubs depend on each other): native-text PDF ingestion + retrieval first → grounded answering with "decline if unsupported" → citations → safety pre/post checks → OCR path for scans → doc classification + filtered retrieval → eval harness.
 
 ## Conventions
 
 - Python 3.11+, `from __future__ import annotations` at the top of every module.
-- Package lives under `src/tara/` (src layout); the `tara` console script maps to `tara.web_app:main`.
-- Data models are dataclasses in [src/tara/data_models.py](src/tara/data_models.py); error types live in [src/tara/app_errors.py](src/tara/app_errors.py); `DocType` is a closed `Literal` set.
+- Package lives under `backend/src/tara/` (src layout); the `tara` console script maps to `tara.web_app:main`.
+- Data models are dataclasses in [backend/src/tara/data_models.py](backend/src/tara/data_models.py); error types live in [backend/src/tara/app_errors.py](backend/src/tara/app_errors.py); `DocType` is a closed `Literal` set.
 - **Naming rules (enforced, non-negotiable):**
   1. Every package/file/function/variable names its object — `local_data_stores`, never `storage`; `agent_tools`, never `tools`; `retrieve_chunks()`, never `retrieve()`.
   2. Packages are capabilities or planes; files are their components. A name must answer "what does this do to what" without opening it.

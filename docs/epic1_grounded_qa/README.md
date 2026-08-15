@@ -171,9 +171,8 @@ question (in request BODY, not URL; Privacy) → SAFETY pre-check (fail-closed)
 
 ```
 tara-health/
-├── pyproject.toml               # deps wired to the chosen stack
-├── .env.example                 # config: model mode, paths, models, api key, limits
-├── src/tara/
+├── backend/pyproject.toml       # deps wired to the chosen stack
+├── backend/src/tara/
 │   │  # -- shared kernel (importable by every layer; imports nothing above it) --
 │   ├── config.py                # central settings (paths, model mode, embed model, api key, limits, timeouts)
 │   ├── data_models.py           # Document, Chunk, Citation, DocType (M2 sketch)
@@ -190,12 +189,20 @@ tara-health/
 │   │                            #   document_purge — ALL SQL lives here, callers use record functions
 │   ├── safety_checks/           # control plane: emergency triage (pre-check, fail-closed) + answer framing (post-check) (M5)
 │   │  # -- surface --
-│   ├── web_app.py               # FastAPI: /upload, /ask (body), / (UI); `tara` entry point; composition root
-│   └── web_ui/                  # templates + static for the local UI
+│   └── web_app.py               # FastAPI: /upload, /ask (body), / (UI); `tara` entry point; composition root
 │   # reserved for Epic 2 (created when the code exists): agent_orchestration/, agent_tools/
-├── scripts/initialize_data_stores.py   # create schema + vector table + index_meta
-└── tests/                       # MIRRORS src/tara: one test module per source module
-                                 #   (tests/<package>/test_<module>.py); behavior_evals/ lands with M8
+├── backend/scripts/initialize_data_stores.py   # create schema + vector table + index_meta
+├── backend/tests/                # MIRRORS backend/src/tara: one test module per source module
+│                                  #   (tests/<package>/test_<module>.py); behavior_evals/ lands with M8
+├── frontend/                     # templates + static for the local UI — now lives at the repository root, not under backend/src/tara
+│   ├── index.html
+│   └── app.js
+├── deployment/
+│   ├── docker/                   # Dockerfile.backend + compose.yaml for the containerized stack
+│   └── local/bootstrap.sh        # one-command dev setup (venv, install, .env, data stores)
+├── .github/workflows/ci.yml      # lint + typecheck + test on push/PR
+├── Makefile                      # install/lint/typecheck/test/eval/run/up/down targets
+└── .env.example                  # config: model mode, paths, models, api key, limits
 ```
 
 - **Import direction (enforceable rule):** kernel ← planes ← capabilities ← safety/agent packages ← web_app.

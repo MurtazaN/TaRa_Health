@@ -70,24 +70,21 @@ your device by default, and the app serves one user (you).
 git clone https://github.com/<you>/<repo>.git
 cd <repo>
 
-# Install (dev tools: pytest, ruff, mypy)
-pip install -e ".[dev]"
+# One-command setup: venv, backend install, .env, data stores
+./deployment/local/bootstrap.sh
 
-# Pull the local model named in .env (TARA_LOCAL_MODEL)
-ollama pull qwen3:8b
-
-# Configure environment (model mode, paths, models)
-cp .env.example .env
-
-# Create the SQLite schema + sqlite-vec table (run once)
-python scripts/initialize_data_stores.py
+# Run the tests
+make test
 
 # Run the local server at http://127.0.0.1:8000
-tara
+make run
+
+# Or run the containerized stack
+make up
 ```
 
-> Optional encrypted-at-rest storage: `pip install -e ".[encryption]"` (pulls
-> SQLCipher; kept optional so the default install works out of the box).
+> Optional encrypted-at-rest storage: `pip install -e "./backend[encryption]"`
+> (pulls SQLCipher; kept optional so the default install works out of the box).
 
 ---
 

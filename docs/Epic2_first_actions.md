@@ -304,7 +304,7 @@ profile                          -- single-profile preferences
 - Package/file names follow the settled Epic 1 naming conventions (`agent_orchestration/`, `agent_tools/` are the names reserved in the Epic 1 layout; `local_data_stores/` is the state plane).
 
 ```
-src/tara/
+backend/src/tara/
 ├── agent_orchestration/         # NEW: orchestrator/planner loop + confirmation gate (M1)
 │   ├── turn_orchestrator.py     #   perceive→plan→confirm→act→observe
 │   ├── action_planner.py        #   LLM planning call → structured tool calls
