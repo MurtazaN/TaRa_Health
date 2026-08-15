@@ -1,4 +1,9 @@
-# Phase 1 — Foundation
+# Epic 0 · M1 — repo_restructure
+
+- **Parent:** [Epic 0 — Foundation](README.md) — overview · decisions · build order · global constraints.
+- **Seams:** creates the layout every later module builds in. [M2](M2_observability.md) and Epic 1 M4 both depend on it landing first; running it after M4 means moving M4's files twice.
+
+---
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans. Steps use checkbox (`- [ ]`) syntax.
 
@@ -6,14 +11,14 @@
 
 **Architecture:** The Python package moves wholesale from `src/tara/` to `backend/src/tara/`; the two user-interface files move out of the package into `frontend/`. Only two code paths assume the old layout and both become configuration. Everything else is new files that did not exist before.
 
-**Spec:** [../../specs/2026-08-14-foundation-and-stack-design.md](../../specs/2026-08-14-foundation-and-stack-design.md) §4, §8
+**Design sections:** [Epic 0 README](README.md) §4, §8
 
 **Tech Stack:** git · uv · Docker Compose · GitHub Actions · GNU make
 
 ## Global Constraints
 
 - See [README.md](README.md#global-constraints). Every task's requirements implicitly include that section.
-- **Phase 1 is behaviour-neutral.** The proof is that the test suite reports exactly `67 passed, 3 skipped` before and after.
+- **M1 is behaviour-neutral.** The proof is that the test suite reports exactly `67 passed, 3 skipped` before and after.
 
 ## File Structure
 
@@ -42,7 +47,7 @@
 
 **Interfaces:**
 - Consumes: nothing.
-- Produces: `Settings.frontend_dir: Path` — phase 2 and the container both read it.
+- Produces: `Settings.frontend_dir: Path` — Epic 0 M2 and the container both read it.
 
 **Context an engineer needs:**
 - Only two places in the codebase assume the current layout: `web_app.py:44` (`_web_dir = Path(__file__).parent / "web_ui"`) and `conftest.py:21` (`Path(__file__).parent / "fixtures"`).
@@ -194,7 +199,7 @@ No behaviour change: 67 passed, 3 skipped before and after."
 
 **Context an engineer needs:**
 - Four declared dependencies are not imported anywhere in `backend/src/`. Verified 2026-08-14.
-- `sentence-transformers` is also currently unimported, but it is **retained deliberately** — phase 3 uses its `CrossEncoder` class to run the reranker. Do not remove it.
+- `sentence-transformers` is also currently unimported, but it is **retained deliberately** — Epic 1 M3 uses its `CrossEncoder` class to run the reranker. Do not remove it.
 - The `[tool.pytest.ini_options]` comment references a vendored `ECC/` tree that no longer exists. The `testpaths` setting is still correct and stays; only the stale comment goes.
 
 - [ ] **Step 1: Confirm the four dependencies really are unused**
@@ -287,7 +292,7 @@ sentence-transformers, which becomes the M3 reranker runtime."
 **Context an engineer needs:**
 - Every target runs from the repository root; the ones that need `backend/` as their working directory `cd` there themselves.
 - `make eval` is deliberately **not** wired into CI. The DeepEval judge is the local LM Studio model, which a GitHub Actions runner does not have. See spec §8.3.
-- The `eval` target will fail until phase 3 builds the harness; it is defined now so the interface is stable.
+- The `eval` target will fail until Epic 1 M8 builds the harness; it is defined now so the interface is stable.
 
 - [ ] **Step 1: Create the Makefile**
 
@@ -394,7 +399,7 @@ local LM Studio model, which a hosted runner does not have."
 
 **Interfaces:**
 - Consumes: `Settings.frontend_dir` from Task 1; `make up` / `make down` from Task 3.
-- Produces: a `tara-backend` service on port 8000. Phase 2 adds the `phoenix` service to the same file.
+- Produces: a `tara-backend` service on port 8000. Epic 0 M2 adds the `phoenix` service to the same file.
 
 **Context an engineer needs:**
 - **LM Studio stays on the host.** It needs direct graphics-hardware access and cannot usefully run in this container. The backend reaches it through `host.docker.internal`, which Docker Desktop provides on macOS and which the `extra_hosts` entry provides on Linux.
@@ -648,7 +653,7 @@ make eval before merge instead."
 - [ ] **Step 1: Find every stale path reference**
 
 ```bash
-grep -rn "src/tara\|pip install -e\|python scripts/\|web_ui" CLAUDE.md README.md docs/*.md docs/epic1_grounded_qa/*.md | grep -v superpowers
+grep -rn "src/tara\|pip install -e\|python scripts/\|web_ui" CLAUDE.md README.md docs/*.md docs/epic1_grounded_qa/*.md
 ```
 
 Every hit is a line to update or confirm.
@@ -685,7 +690,7 @@ Replace the install and run commands with the `make` targets from step 2.
 - [ ] **Step 6: Verify no stale references remain**
 
 ```bash
-grep -rn "src/tara" CLAUDE.md README.md docs/*.md docs/epic1_grounded_qa/*.md | grep -v "backend/src/tara" | grep -v superpowers || echo "CLEAN"
+grep -rn "src/tara" CLAUDE.md README.md docs/*.md docs/epic1_grounded_qa/*.md | grep -v "backend/src/tara" || echo "CLEAN"
 ```
 
 Expected: `CLEAN`
@@ -704,7 +709,7 @@ the layout and need no change."
 
 ---
 
-## Phase 1 acceptance
+## M1 acceptance
 
 - [ ] `make test` reports `67 passed, 3 skipped` — identical to the pre-restructure baseline.
 - [ ] `make lint` and `make typecheck` are clean.

@@ -1,4 +1,9 @@
-# Phase 2 — Observability
+# Epic 0 · M2 — observability
+
+- **Parent:** [Epic 0 — Foundation](README.md) — overview · decisions · build order · global constraints.
+- **Seams:** depends on [M1](M1_repo_restructure.md). Instruments Epic 1 [M1 ingestion](../epic1_grounded_qa/M1_ingestion_pipeline.md) and [M3 retrieval](../epic1_grounded_qa/M3_retrieval.md); the answering spans land with Epic 1 M4 per [M3](M3_epic1_handoff.md) §3.1. Supplies `redact_phi()` to the Epic 1 hosted-egress path.
+
+---
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans. Steps use checkbox (`- [ ]`) syntax.
 
@@ -6,14 +11,14 @@
 
 **Architecture:** A kernel-level `phi_redaction` module wraps Presidio. A new `execution_tracing` plane configures OpenTelemetry and exposes one `traced_span()` context manager that redacts every string attribute *at set time*. Arize Phoenix runs as a second Compose service and receives spans over OTLP. Tracing is off by default.
 
-**Spec:** [../../specs/2026-08-14-foundation-and-stack-design.md](../../specs/2026-08-14-foundation-and-stack-design.md) §5, §6.2, §7, §8.1
+**Design sections:** [Epic 0 README](README.md) §5, §6.2, §7, §8.1
 
 **Tech Stack:** OpenTelemetry Python SDK · OpenInference semantic conventions · Presidio (analyzer + anonymizer) · spaCy `en_core_web_sm` · Arize Phoenix
 
 ## Global Constraints
 
 - See [README.md](README.md#global-constraints). Every task's requirements implicitly include that section.
-- **Phase 2 is behaviour-neutral.** With `TARA_TRACING_ENABLED=false` (the default) nothing changes; the test suite must stay at `67 passed, 3 skipped` plus the new tests this phase adds.
+- **M2 is behaviour-neutral.** With `TARA_TRACING_ENABLED=false` (the default) nothing changes; the test suite must stay at `67 passed, 3 skipped` plus the new tests this phase adds.
 - **Redaction happens at attribute-set time, not at export time.** A value that never enters a span cannot leak through a misconfigured exporter.
 
 ## File Structure
@@ -40,7 +45,7 @@
 - Modify: `.github/workflows/ci.yml`
 
 **Interfaces:**
-- Consumes: phase 1 Task 2's repaired manifest.
+- Consumes: M1 Task 2's repaired manifest.
 - Produces: `Settings.tracing_enabled: bool`, `Settings.otlp_endpoint: str`, `Settings.service_name: str`, `Settings.phi_redaction_enabled: bool`, `Settings.phi_redaction_nlp_model: str`. Every later task in this phase reads these.
 
 **Context an engineer needs:**
@@ -61,7 +66,7 @@ In `backend/pyproject.toml`, add to `dependencies`:
     "presidio-anonymizer>=2.2",
 ```
 
-**Deliberately not added yet:** `openinference-semantic-conventions`. It supplies the standard attribute names for *model-call* spans (prompt, completion, token counts). Phase 2 instruments ingestion and retrieval, which have no model-call spans, so importing it here would add a dependency with no call site. It arrives with M4 — see phase 3 §3.1.
+**Deliberately not added yet:** `openinference-semantic-conventions`. It supplies the standard attribute names for *model-call* spans (prompt, completion, token counts). M2 instruments ingestion and retrieval, which have no model-call spans, so importing it here would add a dependency with no call site. It arrives with M4 — see M3 §3.1.
 
 - [ ] **Step 2: Add the settings**
 
@@ -134,7 +139,7 @@ is a setting, so upgrading recall is a config change."
 
 **Interfaces:**
 - Consumes: `Settings.phi_redaction_enabled`, `Settings.phi_redaction_nlp_model` from Task 1.
-- Produces: `redact_phi(text: str) -> str`. Consumed by Task 3 (`span_redaction`) and, at phase 3, by the hosted-egress path.
+- Produces: `redact_phi(text: str) -> str`. Consumed by Task 3 (`span_redaction`) and, at Epic 1 M4, by the hosted-egress path.
 
 **Context an engineer needs:**
 - This is a **kernel root module**, not a package — it is one concept, and the naming rules forbid one-concept packages.
@@ -753,10 +758,10 @@ on actual spans rather than on a mock."
 
 **Interfaces:**
 - Consumes: `traced_span()`, `record_span_attribute()` from Task 5.
-- Produces: spans named `ingest_document`, `extract_text_spans`, `chunk_spans`, `embed_chunks`, `retrieve_chunks`, `embed_query`, `find_nearest_chunks`. Phase 3 adds the answering spans.
+- Produces: spans named `ingest_document`, `extract_text_spans`, `chunk_spans`, `embed_chunks`, `retrieve_chunks`, `embed_query`, `find_nearest_chunks`. Epic 1 M4 adds the answering spans.
 
 **Context an engineer needs:**
-- **Only ingestion and retrieval are instrumented in this phase**, because they are the two flows that actually work today. `answer_question()` cannot run end to end — `screen_for_emergency()` raises `NotImplementedError` — so its spans land with M4 and M5 in phase 3.
+- **Only ingestion and retrieval are instrumented in this module**, because they are the two flows that actually work today. `answer_question()` cannot run end to end — `screen_for_emergency()` raises `NotImplementedError` — so its spans land with Epic 1 M4 and M5.
 - Import direction holds: capability → plane is permitted.
 - Attributes must be primitives. Never put a chunk's text or a filename on a span; put counts, scores, and identifiers.
 
@@ -878,7 +883,7 @@ carrying counts and scores only - never chunk text or filenames.
 
 Answering spans are deliberately absent: answer_question cannot run
 end to end until M5 implements screen_for_emergency, so they land in
-phase 3 alongside it."
+Epic 1 M4 alongside it."
 ```
 
 ---
@@ -938,7 +943,7 @@ Add to the top-level `volumes` block:
 Append to `.env.example`:
 
 ```bash
-# ---- Execution tracing (spec: docs/superpowers/specs/2026-08-14-foundation-and-stack-design.md) ----
+# ---- Execution tracing (spec: docs/epic0_foundation/README.md) ----
 # Off by default. Spans carry the question and retrieved text, so PHI redaction
 # runs before any value reaches a span.
 TARA_TRACING_ENABLED=false
@@ -986,7 +991,7 @@ Open `http://localhost:6006` in a browser. Confirm all four:
 3. `chunk_spans` carries a `chunk_count` attribute with a real number.
 4. **No span attribute anywhere contains the strings `Michael Okonkwo` or `XQZ8842190`.**
 
-Item 4 is the acceptance criterion for this phase. If it fails, stop and fix redaction before proceeding.
+Item 4 is the acceptance criterion for this module. If it fails, stop and fix redaction before proceeding.
 
 - [ ] **Step 6: Tear down and document the plane**
 
@@ -1016,7 +1021,7 @@ Verified end to end via /upload, since /ask cannot run until M5."
 
 ---
 
-## Phase 2 acceptance
+## M2 acceptance
 
 - [ ] `make test` reports `84 passed, 3 skipped`.
 - [ ] `make lint` and `make typecheck` are clean.

@@ -4,8 +4,9 @@
 - **Explicitly out of scope for Epic 1:** any agentic *action* (no calendar, email, pharmacy, delivery).
 - Epic 1 builds the foundation — ingestion, retrieval, grounded answering, citations, and the safety layer — that every later epic depends on.
 - The action seam itself is designed in [Epic2_first_actions.md](../Epic2_first_actions.md).
+- **Prerequisite (added 2026-08-14):** [Epic 0 — Foundation](../epic0_foundation/README.md) M1 and M2 must land **before Epic 1 M4**. Epic 0 also imposes deltas on Epic 1 M3, M4, M5, and M8 — read [Epic 0 M3 — epic1_handoff](../epic0_foundation/M3_epic1_handoff.md) before planning any of those modules. Their contracts below are otherwise unchanged.
 - **Status:** Draft v0.3 (content); split into per-module docs 2026-07-08 (content unchanged).
-- **Last updated:** 2026-07-08.
+- **Last updated:** 2026-07-08 (content); Epic 0 prerequisite noted 2026-08-14.
 
 ### Changelog v0.2 → v0.3
 
