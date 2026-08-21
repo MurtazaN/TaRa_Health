@@ -3,8 +3,8 @@
 - **Epic 0 scope:** the infrastructure and tooling layer every other epic stands on — monorepo separation, CI/CD, containers, execution tracing, PHI redaction, and the settled third-party stack.
 - **Explicitly out of scope:** any change to an Epic 1 module *contract*. M1 and M2 here are behaviour-neutral; the functional work stays governed by [epic1_grounded_qa/](../epic1_grounded_qa/README.md).
 - **Why "Epic 0":** it precedes Epic 1 in build order but was designed after it, once the missing layer became visible. Modules M1 and M2 must land before Epic 1 M4, or M4's files get moved twice.
-- **Status:** Approved 2026-08-14. Not yet implemented.
-- **Last updated:** 2026-08-14.
+- **Status:** Approved 2026-08-14. **M1 implemented 2026-08-15** — restructure, dependency repair, Makefile, containers, and CI are live on `main`-bound branch `feat/foundation-and-stack`. M2 and M3 are not yet built.
+- **Last updated:** 2026-08-15.
 
 ---
 
@@ -160,7 +160,7 @@
 
 | # | Module | Changes behaviour? | Gate |
 |---|---|---|---|
-| 1 | [M1 — repo_restructure](M1_repo_restructure.md) | No | Suite still 67 passed / 3 skipped; `docker compose up` serves `/` |
+| 1 | [M1 — repo_restructure](M1_repo_restructure.md) | No | **DONE 2026-08-15** — suite held at 67 passed / 3 skipped; `make up` then `curl http://127.0.0.1:8000/` returns `200` |
 | 2 | [M2 — observability](M2_observability.md) | No | An `/upload` call produces a redacted span tree at `localhost:6006` |
 | 3 | [M3 — epic1_handoff](M3_epic1_handoff.md) | n/a — a planning boundary | Epic 1 resumes at its own M4 |
 
