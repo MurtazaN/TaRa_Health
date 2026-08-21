@@ -4,8 +4,9 @@
 - **Explicitly out of scope for Epic 1:** any agentic *action* (no calendar, email, pharmacy, delivery).
 - Epic 1 builds the foundation — ingestion, retrieval, grounded answering, citations, and the safety layer — that every later epic depends on.
 - The action seam itself is designed in [Epic2_first_actions.md](../Epic2_first_actions.md).
+- **Prerequisite (added 2026-08-14):** [Epic 0 — Foundation](../epic0_foundation/README.md) M1 and M2 must land **before Epic 1 M4**. Epic 0 also imposes deltas on Epic 1 M3, M4, M5, and M8 — read [Epic 0 M3 — epic1_handoff](../epic0_foundation/M3_epic1_handoff.md) before planning any of those modules. Their contracts below are otherwise unchanged.
 - **Status:** Draft v0.3 (content); split into per-module docs 2026-07-08 (content unchanged).
-- **Last updated:** 2026-07-08.
+- **Last updated:** 2026-07-08 (content); Epic 0 prerequisite noted 2026-08-14.
 
 ### Changelog v0.2 → v0.3
 
@@ -170,9 +171,8 @@ question (in request BODY, not URL; Privacy) → SAFETY pre-check (fail-closed)
 
 ```
 tara-health/
-├── pyproject.toml               # deps wired to the chosen stack
-├── .env.example                 # config: model mode, paths, models, api key, limits
-├── src/tara/
+├── backend/pyproject.toml       # deps wired to the chosen stack
+├── backend/src/tara/
 │   │  # -- shared kernel (importable by every layer; imports nothing above it) --
 │   ├── config.py                # central settings (paths, model mode, embed model, api key, limits, timeouts)
 │   ├── data_models.py           # Document, Chunk, Citation, DocType (M2 sketch)
@@ -189,12 +189,21 @@ tara-health/
 │   │                            #   document_purge — ALL SQL lives here, callers use record functions
 │   ├── safety_checks/           # control plane: emergency triage (pre-check, fail-closed) + answer framing (post-check) (M5)
 │   │  # -- surface --
-│   ├── web_app.py               # FastAPI: /upload, /ask (body), / (UI); `tara` entry point; composition root
-│   └── web_ui/                  # templates + static for the local UI
+│   └── web_app.py               # FastAPI: /upload, /ask (body), / (UI); `tara` entry point; composition root
 │   # reserved for Epic 2 (created when the code exists): agent_orchestration/, agent_tools/
-├── scripts/initialize_data_stores.py   # create schema + vector table + index_meta
-└── tests/                       # MIRRORS src/tara: one test module per source module
-                                 #   (tests/<package>/test_<module>.py); behavior_evals/ lands with M8
+├── backend/scripts/initialize_data_stores.py   # create schema + vector table + index_meta
+├── backend/tests/                # MIRRORS backend/src/tara: one test module per source module
+│                                  #   (tests/<package>/test_<module>.py); behavior_evals/ lands with M8
+├── frontend/                     # templates + static for the local UI — now lives at the repository root, not under backend/src/tara
+│   ├── index.html
+│   └── app.js
+├── deployment/
+│   ├── docker/                   # Dockerfile.backend + compose.yaml for the containerized stack
+│   └── local/bootstrap.sh        # one-command dev setup (venv, install, .env, data stores)
+├── .github/workflows/ci.yml      # lint + typecheck + test on push/PR
+├── Makefile                      # install/lint/typecheck/test/eval/run/up/down targets
+├── .dockerignore                 # depth-independent excludes for the docker build context
+└── .env.example                  # config: model mode, paths, models, api key, limits
 ```
 
 - **Import direction (enforceable rule):** kernel ← planes ← capabilities ← safety/agent packages ← web_app.

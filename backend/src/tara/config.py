@@ -18,13 +18,37 @@ _DEFAULT_MAX_UPLOAD_BYTES = 50 * 1024 * 1024
 
 LocalLLMBackend = Literal["ollama", "openai_compatible"]
 
+# backend/src/tara/config.py -> parents: [0]=tara, [1]=src, [2]=backend, [3]=repo root.
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="TARA_", env_file=".env", extra="ignore")
+    # `.env` lives at the repository root, but commands may run from `backend/`.
+    # Name both so the file is found either way; the CWD-relative entry wins when
+    # both exist, and the container supplies plain env vars instead of a file.
+    model_config = SettingsConfigDict(
+        env_prefix="TARA_",
+        env_file=(_REPO_ROOT / ".env", ".env"),
+        extra="ignore",
+    )
 
     # ---- Storage (local-first) ----
-    data_dir: Path = Field(default=Path("./.tara_data"))
+    # Repo-anchored, not CWD-relative: every entry point (Makefile, bootstrap.sh)
+    # changes the working directory to backend/ before running, so a relative
+    # default would silently relocate an existing user's store.
+    data_dir: Path = Field(default=_REPO_ROOT / ".tara_data")
     db_key: str = Field(default="")  # SQLCipher passphrase; empty => unencrypted (dev only)
+    # The user interface lives outside the Python package (monorepo layout), so
+    # its location is configuration — the container mounts it elsewhere.
+    frontend_dir: Path = Field(default=_REPO_ROOT / "frontend")
+
+    # ---- Local server bind address ----
+    # Loopback by default: this app holds PHI and must not be reachable from the
+    # network unless the operator deliberately opts in. A container sets this to
+    # "0.0.0.0" because Docker's published port forwards to the bridge interface,
+    # which a loopback-only bind can never receive; there, Docker mediates exposure.
+    # Do NOT set this to "0.0.0.0" when running directly on a host.
+    server_host: str = "127.0.0.1"
 
     # ---- Model mode (§3.5) ----
     model_mode: Literal["local", "hosted", "hybrid"] = "local"

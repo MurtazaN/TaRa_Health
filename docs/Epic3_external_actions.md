@@ -289,7 +289,7 @@ turn → safety → orchestrator → confirm WHICH prescription
 - Names follow the settled Epic 1/2 conventions (`agent_tools/`, `agent_orchestration/`, `local_data_stores/`).
 
 ```
-src/tara/
+backend/src/tara/
 ├── agent_tools/
 │   ├── tool_protocol.py       # EXTEND: add prepare()/Handoff for the assisted-handoff kind (M1)
 │   ├── gmail_email.py         # NEW: Gmail draft/send (MCP or API, OAuth2) (M2)

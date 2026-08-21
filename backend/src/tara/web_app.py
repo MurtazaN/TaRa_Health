@@ -3,7 +3,7 @@ Read-only — there are no action endpoints yet (that's Phase 2+).
 """
 from __future__ import annotations
 
-from pathlib import Path
+import warnings
 
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -12,6 +12,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
 from tara.app_errors import IndexMismatchError, IngestionError, UploadError
+from tara.config import get_settings
 from tara.document_ingestion.ingestion_pipeline import ingest_document
 from tara.question_answering.question_answerer import answer_question
 
@@ -41,9 +42,11 @@ class AskRequest(BaseModel):
     question: str
     prefer_hosted: bool = False
 
-_web_dir = Path(__file__).parent / "web_ui"
-templates = Jinja2Templates(directory=str(_web_dir / "templates"))
-app.mount("/static", StaticFiles(directory=str(_web_dir / "static")), name="static")
+# Templates and static assets share one directory in the monorepo layout;
+# index.html references "/static/app.js", so the mount keeps that URL working.
+_frontend_dir = get_settings().frontend_dir
+templates = Jinja2Templates(directory=str(_frontend_dir))
+app.mount("/static", StaticFiles(directory=str(_frontend_dir)), name="static")
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -92,7 +95,20 @@ def main() -> None:
     finally:
         conn.close()
     reconcile_orphan_blobs()  # sweep PHI blobs orphaned by an interrupted delete (§7)
-    uvicorn.run("tara.web_app:app", host="127.0.0.1", port=8000, reload=False)
+
+    bind_host = get_settings().server_host
+    if bind_host != "127.0.0.1":
+        # The one setting that widens PHI exposure gets its own guard, since a
+        # code comment in config.py can only warn passively. This is a bare
+        # host process, not the container - Docker is not here to mediate.
+        warnings.warn(
+            f"TARA_SERVER_HOST is '{bind_host}', not the loopback default. "
+            "This app has no authentication and serves PHI; binding beyond "
+            "127.0.0.1 exposes it to the network.",
+            stacklevel=2,
+        )
+
+    uvicorn.run("tara.web_app:app", host=bind_host, port=8000, reload=False)
 
 
 if __name__ == "__main__":
