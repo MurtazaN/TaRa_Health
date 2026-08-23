@@ -39,10 +39,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+      # The spaCy model (en_core_web_lg) installs as a pinned wheel dependency
+      # of the backend package - see pyproject.toml - so no separate download
+      # step is needed here.
       - run: uv pip install --system -e "./backend[dev]"
-      # en_core_web_lg: the smaller models miss names in benefits-document
-      # formats (ALL-CAPS headers, label:value fragments) - see config.py.
-      - run: python -m spacy download en_core_web_lg
       # No LM Studio on a hosted runner; the suite is offline by design
       # (conftest replaces the embedder with a deterministic fake).
       - run: make test

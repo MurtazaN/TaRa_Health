@@ -65,6 +65,10 @@ def test_all_caps_name_is_removed(redaction_on):
     redacted = redact_phi("MEMBER NAME: JAMAL WASHINGTON")
     assert "JAMAL" not in redacted
     assert "WASHINGTON" not in redacted
+    # Guards against total destruction: a redactor that nukes the whole
+    # string to "" would also make the two asserts above pass.
+    assert "<PERSON>" in redacted
+    assert "MEMBER NAME" in redacted
 
 
 @pytest.mark.integration
@@ -72,6 +76,60 @@ def test_given_name_alone_is_not_left_behind(redaction_on):
     """en_core_web_sm caught only the surname here, leaving the given name."""
     redacted = redact_phi("Patient Priya Raghunathan was seen on Tuesday.")
     assert "Priya" not in redacted
+    # Guards against total destruction: an empty string would also satisfy
+    # the assert above without proving anything was actually redacted.
+    assert "<PERSON>" in redacted
+    assert "was seen on" in redacted
+
+
+@pytest.mark.integration
+def test_prose_mentioning_member_id_survives(redaction_on):
+    """Presidio's PatternRecognizer defaults global_regex_flags to include
+    IGNORECASE, which would make [A-Z0-9] match lowercase prose words -
+    destroying sentences that merely mention the label."""
+    redacted = redact_phi("Your Member ID cards are mailed within ten business days.")
+    assert "cards are mailed" in redacted
+    assert "<INSURANCE_MEMBER_ID>" not in redacted
+
+
+@pytest.mark.integration
+def test_prose_mentioning_group_number_survives(redaction_on):
+    redacted = redact_phi("The Group Number assigned to your employer appears below.")
+    assert "assigned to your employer" in redacted
+    assert "<INSURANCE_GROUP_ID>" not in redacted
+
+
+@pytest.mark.integration
+def test_unlabelled_member_id_formats_are_removed(redaction_on):
+    """The label token used to be required, so common card formats without
+    the word ID/Number leaked entirely."""
+    for text, must_remove in [
+        ("Group: 55210", "55210"),
+        ("Member: W8842190113", "W8842190113"),
+        ("Plan ID: HMO-2210", "HMO-2210"),
+        ("MBI: 1EG4-TE5-MK73", "1EG4-TE5-MK73"),
+    ]:
+        redacted = redact_phi(text)
+        assert must_remove not in redacted, f"{must_remove!r} leaked in {redacted!r}"
+
+
+@pytest.mark.integration
+def test_every_redacted_entity_is_actually_supported(redaction_on):
+    """Presidio logs a warning and SKIPS an unknown entity name rather than
+    failing, so a typo or an upstream rename would silently stop redacting a
+    whole category while every other test still passed."""
+    from tara.phi_redaction import REDACTED_ENTITIES, _analyzer_engine
+
+    supported = set(_analyzer_engine().get_supported_entities(language="en"))
+    unsupported = sorted(set(REDACTED_ENTITIES) - supported)
+    assert not unsupported, f"not recognised by Presidio: {unsupported}"
+
+
+def test_non_string_input_is_rejected(redaction_on):
+    """redact_phi is annotated -> str; a non-string input must raise rather
+    than silently pass through and violate that contract."""
+    with pytest.raises(TypeError):
+        redact_phi(None)  # type: ignore[arg-type]
 
 
 def test_disabled_redaction_passes_text_through(monkeypatch):

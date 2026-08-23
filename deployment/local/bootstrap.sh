@@ -14,12 +14,10 @@ echo "==> Creating virtualenv (if absent)"
 source .venv/bin/activate
 
 echo "==> Installing backend with dev extras"
+# The spaCy model (en_core_web_lg) installs as a pinned wheel dependency of
+# the backend package itself, not a separate `spacy download` - see
+# pyproject.toml. That keeps the container, CI, and this venv on one version.
 uv pip install -e "./backend[dev]"
-
-echo "==> Downloading the spaCy model Presidio needs"
-# en_core_web_lg (~427MB): the smaller models miss names in benefits-document
-# formats (ALL-CAPS headers, label:value fragments) - see config.py.
-python -m spacy download en_core_web_lg
 
 echo "==> Seeding .env (if absent)"
 [ -f .env ] || cp .env.example .env

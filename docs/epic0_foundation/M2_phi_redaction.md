@@ -43,8 +43,6 @@
 **Files:**
 - Modify: `backend/pyproject.toml`
 - Modify: `backend/src/tara/config.py`
-- Modify: `deployment/local/bootstrap.sh`
-- Modify: `.github/workflows/ci.yml`
 - Modify: `.env.example`
 
 **Interfaces:**
@@ -53,6 +51,7 @@
 
 **Context an engineer needs:**
 - **Presidio needs a spaCy language model at runtime.** This plan pins `en_core_web_lg` (~427 MB on disk), configured explicitly. An earlier revision of this plan pinned `en_core_web_sm` (~12 MB) to keep laptop installs and CI runners light; Task 2's testing measured that `en_core_web_sm` returns **zero** entities for `"Member: Priya Raghunathan"` and leaks the given name in `"MEMBER NAME: JAMAL WASHINGTON"`, and that `en_core_web_md` still misses ALL-CAPS names — both formats are standard in benefits documents, so the smaller models fail this module's only job. Size is noise next to the local model this app already runs. The model name stays a setting, so it remains a one-line change if a future model changes the tradeoff again.
+- **The model is a pinned wheel dependency, not a `spacy download` step.** An earlier revision downloaded the model separately in `bootstrap.sh` and CI — but the container's `Dockerfile.backend` installs Presidio and never ran that download, so the first `redact_phi()` call inside a container raised `OSError [E050] Can't find model`. Pinning `en_core_web_lg` as a wheel URL in `pyproject.toml`'s `dependencies` fixes the container, CI, and a local venv in one move, and pins the exact model version so nothing drifts against whatever `spacy download` would resolve to.
 - The OpenTelemetry dependencies are **not** added here — they belong to [M3](M3_execution_tracing.md) Task 1.
 
 - [ ] **Step 1: Add the dependencies**
@@ -63,6 +62,11 @@ In `backend/pyproject.toml`, add to `dependencies`:
     # PHI redaction before any span export or hosted egress
     "presidio-analyzer>=2.2",
     "presidio-anonymizer>=2.2",
+    # The spaCy model is a pinned wheel, not a `spacy download`, so the
+    # container, CI, and a local venv all get the SAME model version. A
+    # `download` resolves to whatever matches the installed spaCy, which would
+    # leave the recall tests pinned against a moving target.
+    "en_core_web_lg @ https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl",
 ```
 
 - [ ] **Step 2: Add the settings**
@@ -83,28 +87,7 @@ In `backend/src/tara/config.py`, add inside `class Settings`, after the Timeouts
     phi_redaction_nlp_model: str = "en_core_web_lg"
 ```
 
-- [ ] **Step 3: Add the spaCy model download to the bootstrap script**
-
-In `deployment/local/bootstrap.sh`, after the install step and before the data-store initialization, insert:
-
-```bash
-echo "==> Downloading the spaCy model Presidio needs"
-# en_core_web_lg: the smaller models miss names in benefits-document formats
-# (ALL-CAPS headers, label:value fragments) - see config.py.
-python -m spacy download en_core_web_lg
-```
-
-- [ ] **Step 4: Add the same download to the CI test job**
-
-In `.github/workflows/ci.yml`, in the `test` job only, insert before `- run: make test`:
-
-```yaml
-      # en_core_web_lg: the smaller models miss names in benefits-document
-      # formats (ALL-CAPS headers, label:value fragments) - see config.py.
-      - run: python -m spacy download en_core_web_lg
-```
-
-- [ ] **Step 5: Document both settings**
+- [ ] **Step 3: Document the enabled flag only — not the model name**
 
 Append to `.env.example`, in the same style as the existing sections:
 
@@ -113,35 +96,42 @@ Append to `.env.example`, in the same style as the existing sections:
 # On by default. Redaction is what makes tracing and hosted egress safe on a
 # health corpus; disable it only for local debugging on synthetic data.
 TARA_PHI_REDACTION_ENABLED=true
-# en_core_web_lg (~427MB): the smaller models miss names in benefits-document
-# formats (ALL-CAPS headers, label:value fragments) - see config.py for the
-# measured cases. Size is noise next to the local model this app already runs.
-TARA_PHI_REDACTION_NLP_MODEL=en_core_web_lg
+# The spaCy model is pinned as a wheel dependency in pyproject.toml, not an
+# env knob: bootstrap copies this file only when .env is absent, so anyone
+# who bootstrapped earlier would keep a stale value here and an env var
+# beats the config.py default - re-introducing exactly the recall gap that
+# was measured and fixed. config.py is the single source of truth.
 ```
 
-- [ ] **Step 6: Install and verify nothing changed**
+Do **not** add a `TARA_PHI_REDACTION_NLP_MODEL` line — see the comment above for why.
+
+- [ ] **Step 4: Install and verify nothing changed**
 
 ```bash
-uv pip install -e "./backend[dev]" && python -m spacy download en_core_web_lg
+uv pip install -e "./backend[dev]"
 cd backend && python -m pytest -q 2>&1 | grep -E "passed|failed" | tail -1
 ```
 
+The wheel dependency in Step 1 installs the model — no separate `spacy download` is needed in bootstrap, CI, or here.
+
 Expected: `67 passed, 3 skipped, ...`
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add backend/pyproject.toml backend/src/tara/config.py deployment/local/bootstrap.sh .github/workflows/ci.yml .env.example
+git add backend/pyproject.toml backend/src/tara/config.py .env.example
 git commit -m "build: add Presidio dependencies and PHI-redaction settings
 
 Both settings default to the safe position, so this commit changes
 nothing observable.
 
-Pins spaCy en_core_web_lg (~427MB): Task 2's testing found the
-smaller models miss names in benefits-document formats (ALL-CAPS
-headers, label:value fragments), which is this module's only job.
-The model name stays a setting, so a future tradeoff change is a
-one-line edit, not a redesign."
+Pins spaCy en_core_web_lg (~427MB) as a wheel dependency rather than
+a spacy download step, so the container, CI, and a local venv all
+get the same model version with no separate download step to forget.
+Task 2's testing found the smaller models miss names in
+benefits-document formats (ALL-CAPS headers, label:value fragments),
+which is this module's only job. The model name stays a setting, so
+a future tradeoff change is a one-line edit, not a redesign."
 ```
 
 ---
@@ -235,6 +225,10 @@ def test_all_caps_name_is_removed(redaction_on):
     redacted = redact_phi("MEMBER NAME: JAMAL WASHINGTON")
     assert "JAMAL" not in redacted
     assert "WASHINGTON" not in redacted
+    # Guards against total destruction: a redactor that nukes the whole
+    # string to "" would also make the two asserts above pass.
+    assert "<PERSON>" in redacted
+    assert "MEMBER NAME" in redacted
 
 
 @pytest.mark.integration
@@ -242,6 +236,60 @@ def test_given_name_alone_is_not_left_behind(redaction_on):
     """en_core_web_sm caught only the surname here, leaving the given name."""
     redacted = redact_phi("Patient Priya Raghunathan was seen on Tuesday.")
     assert "Priya" not in redacted
+    # Guards against total destruction: an empty string would also satisfy
+    # the assert above without proving anything was actually redacted.
+    assert "<PERSON>" in redacted
+    assert "was seen on" in redacted
+
+
+@pytest.mark.integration
+def test_prose_mentioning_member_id_survives(redaction_on):
+    """Presidio's PatternRecognizer defaults global_regex_flags to include
+    IGNORECASE, which would make [A-Z0-9] match lowercase prose words -
+    destroying sentences that merely mention the label."""
+    redacted = redact_phi("Your Member ID cards are mailed within ten business days.")
+    assert "cards are mailed" in redacted
+    assert "<INSURANCE_MEMBER_ID>" not in redacted
+
+
+@pytest.mark.integration
+def test_prose_mentioning_group_number_survives(redaction_on):
+    redacted = redact_phi("The Group Number assigned to your employer appears below.")
+    assert "assigned to your employer" in redacted
+    assert "<INSURANCE_GROUP_ID>" not in redacted
+
+
+@pytest.mark.integration
+def test_unlabelled_member_id_formats_are_removed(redaction_on):
+    """The label token used to be required, so common card formats without
+    the word ID/Number leaked entirely."""
+    for text, must_remove in [
+        ("Group: 55210", "55210"),
+        ("Member: W8842190113", "W8842190113"),
+        ("Plan ID: HMO-2210", "HMO-2210"),
+        ("MBI: 1EG4-TE5-MK73", "1EG4-TE5-MK73"),
+    ]:
+        redacted = redact_phi(text)
+        assert must_remove not in redacted, f"{must_remove!r} leaked in {redacted!r}"
+
+
+@pytest.mark.integration
+def test_every_redacted_entity_is_actually_supported(redaction_on):
+    """Presidio logs a warning and SKIPS an unknown entity name rather than
+    failing, so a typo or an upstream rename would silently stop redacting a
+    whole category while every other test still passed."""
+    from tara.phi_redaction import REDACTED_ENTITIES, _analyzer_engine
+
+    supported = set(_analyzer_engine().get_supported_entities(language="en"))
+    unsupported = sorted(set(REDACTED_ENTITIES) - supported)
+    assert not unsupported, f"not recognised by Presidio: {unsupported}"
+
+
+def test_non_string_input_is_rejected(redaction_on):
+    """redact_phi is annotated -> str; a non-string input must raise rather
+    than silently pass through and violate that contract."""
+    with pytest.raises(TypeError):
+        redact_phi(None)  # type: ignore[arg-type]
 
 
 def test_disabled_redaction_passes_text_through(monkeypatch):
@@ -256,9 +304,14 @@ def test_empty_text_is_returned_unchanged(redaction_on):
     assert redact_phi("") == ""
 ```
 
-The last three tests pin the cases `en_core_web_lg` fixes that `en_core_web_sm` and
-`en_core_web_md` do not — see the model-choice bullet above. They exist so a future
-model downgrade cannot pass review silently.
+The three name-recall tests pin the cases `en_core_web_lg` fixes that `en_core_web_sm`
+and `en_core_web_md` do not — see the model-choice bullet above. The two prose-survival
+and the unlabelled-format tests pin the F3/F4 regex fixes below: dropping
+`IGNORECASE` and requiring a digit in the value. `test_every_redacted_entity_is_actually_supported`
+guards against a silent Presidio-side rename or typo, since Presidio skips an
+unsupported entity name with a warning rather than raising. All of them exist so a
+future regression — a model downgrade, a regex rewrite, an entity-list typo — cannot
+pass review silently.
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
@@ -278,6 +331,7 @@ to show, while dropping the identity that makes it protected health information.
 """
 from __future__ import annotations
 
+import re
 from functools import lru_cache
 
 from presidio_analyzer import AnalyzerEngine, Pattern, PatternRecognizer
@@ -299,17 +353,48 @@ REDACTED_ENTITIES = [
     "US_SSN",
     "LOCATION",
     "MEDICAL_LICENSE",
+    # Identifier shapes Presidio already detects. Without these the hits are
+    # computed and then discarded - an unlabelled member ID in a table cell
+    # matches US_DRIVER_LICENSE and nothing else.
+    "US_DRIVER_LICENSE",
+    "US_PASSPORT",
+    "US_ITIN",
+    # HIPAA counts account and payment numbers as identifiers; premium-autopay
+    # and EOB payment sections carry them.
+    "CREDIT_CARD",
+    "US_BANK_NUMBER",
+    "IBAN_CODE",
+    # EOB portal links routinely embed a member token in the query string.
+    "URL",
     INSURANCE_MEMBER_ID_ENTITY,
     INSURANCE_GROUP_ID_ENTITY,
+    # Deliberately excluded: ORGANIZATION. It fires on ordinary clinical nouns
+    # (measured: "Specialist" gets tagged ORGANIZATION), so including it would
+    # destroy the clinical content this module exists to preserve.
 ]
+
+# Presidio defaults `global_regex_flags` to re.I|re.M|re.S. IGNORECASE would
+# make `[A-Z0-9]` match lowercase prose, so these recognizers drop it.
+_ID_REGEX_FLAGS = re.MULTILINE | re.DOTALL
+
+# The value must contain at least one digit. That single lookahead is what
+# separates "Member ID: W8842190113" from "Member ID cards are mailed" - an
+# identifier always carries a digit, an English word does not.
+_HAS_A_DIGIT = r"(?=[A-Z0-9-]*\d)"
 
 
 def _insurance_member_id_recognizer() -> PatternRecognizer:
     return PatternRecognizer(
         supported_entity=INSURANCE_MEMBER_ID_ENTITY,
+        name="InsuranceMemberIdRecognizer",
+        global_regex_flags=_ID_REGEX_FLAGS,
         patterns=[Pattern(
-            name="member_id",
-            regex=r"(?:Member|Subscriber)\s*(?:ID|Number|No\.?|#)\s*[:#]?\s*[A-Z0-9][A-Z0-9-]{4,}",
+            name="labelled_member_id",
+            regex=(
+                r"\b(?:Member|Subscriber|Insured|Policy|Certificate|Plan|MBI|Medicare)"
+                r"\s*(?:ID|Identification|Number|No\.?|#)?\s*[:#]?\s*"
+                + _HAS_A_DIGIT + r"[A-Z0-9][A-Z0-9-]{3,}\b"
+            ),
             score=0.85,
         )],
     )
@@ -318,9 +403,15 @@ def _insurance_member_id_recognizer() -> PatternRecognizer:
 def _insurance_group_id_recognizer() -> PatternRecognizer:
     return PatternRecognizer(
         supported_entity=INSURANCE_GROUP_ID_ENTITY,
+        name="InsuranceGroupIdRecognizer",
+        global_regex_flags=_ID_REGEX_FLAGS,
         patterns=[Pattern(
-            name="group_id",
-            regex=r"(?:Group)\s*(?:ID|Number|No\.?|#)\s*[:#]?\s*[A-Z0-9][A-Z0-9-]{3,}",
+            name="labelled_group_id",
+            regex=(
+                r"\b(?:Group)"
+                r"\s*(?:ID|Identification|Number|No\.?|#)?\s*[:#]?\s*"
+                + _HAS_A_DIGIT + r"[A-Z0-9][A-Z0-9-]{2,}\b"
+            ),
             score=0.85,
         )],
     )
@@ -351,8 +442,11 @@ def redact_phi(text: str) -> str:
     """Return `text` with PHI entities replaced by `<ENTITY_TYPE>` placeholders.
 
     A no-op when `phi_redaction_enabled` is false or the text is empty, so the
-    caller never has to branch.
+    caller never has to branch. Raises on a non-string input rather than
+    silently passing it through, so the `-> str` contract always holds.
     """
+    if not isinstance(text, str):
+        raise TypeError(f"redact_phi expects str, got {type(text).__name__}")
     if not text or not get_settings().phi_redaction_enabled:
         return text
     analyzer_results = _analyzer_engine().analyze(
@@ -360,22 +454,26 @@ def redact_phi(text: str) -> str:
     )
     if not analyzer_results:
         return text
+    # presidio_analyzer.RecognizerResult and presidio_anonymizer's own
+    # RecognizerResult are structurally identical but nominally distinct
+    # types; the anonymizer accepts the analyzer's results at runtime.
     return _anonymizer_engine().anonymize(
-        text=text, analyzer_results=analyzer_results,
+        text=text,
+        analyzer_results=analyzer_results,  # type: ignore[arg-type]
     ).text
 ```
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `cd backend && python -m pytest tests/test_phi_redaction.py -q`
-Expected: `10 passed`
+Expected: `15 passed`
 
-If `test_insurance_group_id_is_removed` fails, check that the group-number regex tolerates the space in `Group # 55210`. Adjust the regex, not the test. If any of the three model-recall regression tests fail against `en_core_web_lg`, stop and report it — do not add a custom PERSON recognizer to force a pass; that is a Task 3 finding, to be measured before it is patched.
+If `test_insurance_group_id_is_removed` fails, check that the group-number regex tolerates the space in `Group # 55210`. Adjust the regex, not the test. If any of the name-recall or regex-fix regression tests fail, stop and report it — do not add a custom PERSON recognizer to force a pass; that is a Task 3 finding, to be measured before it is patched. Do not lower `score` to force a match.
 
 - [ ] **Step 5: Verify the full suite still passes**
 
 Run: `cd backend && python -m pytest -q 2>&1 | tail -1`
-Expected: `77 passed, 3 skipped, ...`
+Expected: `82 passed, 3 skipped, ...`
 
 - [ ] **Step 6: Commit**
 
