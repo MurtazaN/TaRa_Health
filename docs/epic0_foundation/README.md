@@ -1,9 +1,9 @@
 # TaRa Health — Epic 0: Foundation
 
 - **Epic 0 scope:** the infrastructure and tooling layer every other epic stands on — monorepo separation, CI/CD, containers, execution tracing, PHI redaction, and the settled third-party stack.
-- **Explicitly out of scope:** any change to an Epic 1 module *contract*. M1 and M2 here are behaviour-neutral; the functional work stays governed by [epic1_grounded_qa/](../epic1_grounded_qa/README.md).
+- **Explicitly out of scope:** any change to an Epic 1 module *contract*. M1, M2, and M3 here are behaviour-neutral; the functional work stays governed by [epic1_grounded_qa/](../epic1_grounded_qa/README.md).
 - **Why "Epic 0":** it precedes Epic 1 in build order but was designed after it, once the missing layer became visible. Modules M1 and M2 must land before Epic 1 M4, or M4's files get moved twice.
-- **Status:** Approved 2026-08-14. **M1 implemented 2026-08-15** — restructure, dependency repair, Makefile, containers, and CI are live on `main`-bound branch `feat/foundation-and-stack`. M2 and M3 are not yet built.
+- **Status:** Approved 2026-08-14. **M1 implemented 2026-08-15** — restructure, dependency repair, Makefile, containers, and CI are live on `main`-bound branch `feat/foundation-and-stack`. M2, M3, and M4 are not yet built.
 - **Last updated:** 2026-08-15.
 
 ---
@@ -11,8 +11,11 @@
 ## Modules
 
 1. [M1 — repo_restructure](M1_repo_restructure.md) — move to a `backend/` + `frontend/` + `deployment/` monorepo and add the CI, container, and task-runner layer, with zero behaviour change.
-2. [M2 — observability](M2_observability.md) — make a request's internal execution visible as a trace, with protected health information stripped before it ever enters a span.
-3. [M3 — epic1_handoff](M3_epic1_handoff.md) — the per-module deltas these decisions impose on Epic 1 M3–M8. A planning boundary, not a task list.
+2. [M2 — phi_redaction](M2_phi_redaction.md) — strip protected health information out of any text before it leaves the process, and prove the recall with a fixture.
+3. [M3 — execution_tracing](M3_execution_tracing.md) — make a request's internal execution visible as a trace, with every string attribute redacted before it enters a span.
+4. [M4 — epic1_handoff](M4_epic1_handoff.md) — the per-module deltas these decisions impose on Epic 1 M3–M8. A planning boundary, not a task list.
+
+- **M2 and M3 were one module until 2026-08-15.** They were split because `phi_redaction.py` is a *kernel* module while `execution_tracing/` is a *plane* that depends on it — bundling a kernel module with its own consumer inverts the layering enforced everywhere else. Redaction also has a second consumer independent of tracing (the Epic 1 M4 hosted-egress path), and as the security-critical half it earns its own review gate.
 
 ---
 
@@ -78,7 +81,7 @@
 | 5 | `safety_checks/hazard_classification.py` | Safety | `classify_hazards()`. Named for the job, not the model. Lands with Epic 1 M5. |
 | 6 | `tests/behavior_evals/` | Tests | DeepEval fixture set. Name already reserved in the Epic 1 layout. Lands with Epic 1 M8. |
 
-- Rows 1 and 2 are built in this epic. Rows 3–6 are built in Epic 1, against the deltas in [M3_epic1_handoff.md](M3_epic1_handoff.md).
+- Row 1 is built in M2; row 2 in M3. Rows 3–6 are built in Epic 1, against the deltas in [M4_epic1_handoff.md](M4_epic1_handoff.md).
 
 ## 6. Data-flow changes
 
@@ -115,9 +118,9 @@
 |---|---|---|---|
 | 1 | `TARA_FRONTEND_DIR` | `<repo>/frontend` | Epic 0 M1 |
 | 2 | `TARA_SERVER_HOST` | `127.0.0.1` | Epic 0 M1 |
-| 3 | `TARA_TRACING_ENABLED` | `false` | Epic 0 M2 |
-| 4 | `TARA_OTLP_ENDPOINT` | `http://localhost:6006/v1/traces` | Epic 0 M2 |
-| 5 | `TARA_SERVICE_NAME` | `tara-backend` | Epic 0 M2 |
+| 3 | `TARA_TRACING_ENABLED` | `false` | Epic 0 M3 |
+| 4 | `TARA_OTLP_ENDPOINT` | `http://localhost:6006/v1/traces` | Epic 0 M3 |
+| 5 | `TARA_SERVICE_NAME` | `tara-backend` | Epic 0 M3 |
 | 6 | `TARA_PHI_REDACTION_ENABLED` | `true` | Epic 0 M2 |
 | 7 | `TARA_PHI_REDACTION_NLP_MODEL` | `en_core_web_sm` | Epic 0 M2 |
 | 8 | `TARA_RERANK_ENABLED` | `false` until calibrated | Epic 1 M3 |
@@ -161,8 +164,9 @@
 | # | Module | Changes behaviour? | Gate |
 |---|---|---|---|
 | 1 | [M1 — repo_restructure](M1_repo_restructure.md) | No | **DONE 2026-08-15** — suite held at 67 passed / 3 skipped; `make up` then `curl http://127.0.0.1:8000/` returns `200` |
-| 2 | [M2 — observability](M2_observability.md) | No | An `/upload` call produces a redacted span tree at `localhost:6006` |
-| 3 | [M3 — epic1_handoff](M3_epic1_handoff.md) | n/a — a planning boundary | Epic 1 resumes at its own M4 |
+| 2 | [M2 — phi_redaction](M2_phi_redaction.md) | No | Recall gate passes at 100% on the fixture, and clinical/cost content survives |
+| 3 | [M3 — execution_tracing](M3_execution_tracing.md) | No | An `/upload` call produces a span tree at `localhost:6006` with no name or member identifier in any attribute |
+| 4 | [M4 — epic1_handoff](M4_epic1_handoff.md) | n/a — a planning boundary | Epic 1 resumes at its own M4 |
 
 - **Ordering is load-bearing.** M1 must land before any Epic 1 M4 code, or M4's files get moved twice.
 - **M1 and M2 are behaviour-neutral by design.** Every functional change lives in Epic 1.
@@ -201,6 +205,33 @@
 | 6 | **CrewAI** | Core abstraction is role-playing agent *teams*; TaRa is single-agent, single-profile, one action at a time. |
 | 7 | **Microsoft Agent Framework** | Real (the AutoGen + Semantic Kernel consolidation) but its centre of gravity is .NET/Azure, against a Python local-first app. |
 | 8 | **Langfuse** (as default) | Requires PostgreSQL + ClickHouse + MinIO; too heavy beside a local model on a laptop. Kept as a one-variable swap since both speak OTLP. |
+| 9 | **OpenLLMetry** (Traceloop) | Evaluated properly 2026-08-15, after being passed over without a real comparison in the original design. Three reasons, below. **Revisit at Epic 2.** |
+
+### 11.1 OpenLLMetry — the comparison that was owed
+
+- **Correction:** the original design named OpenLLMetry once, as "the alternative to OpenInference — either works," and chose OpenInference because Phoenix is built around those conventions. That is a convenience argument, not a merit comparison, and it left this decision effectively unmade. Evaluated properly on 2026-08-15.
+
+- **What the two things actually are:**
+  - **OpenInference** is a set of *semantic conventions* — agreed attribute names — plus Phoenix-native pairing. You write the spans.
+  - **OpenLLMetry** is *auto-instrumentation*: import an instrumentor and calls to a supported library emit spans with no code of yours involved. Its whole value is not writing spans yourself.
+
+- **What it would actually cover in TaRa:**
+
+| # | TaRa span | Covered by OpenLLMetry? |
+|---|---|---|
+| 1 | LM Studio generation + embeddings (via the `openai` SDK) | **Yes** — `opentelemetry-instrumentation-openai` |
+| 2 | Ollama generation, if that backend is selected | **Yes** — `opentelemetry-instrumentation-ollama` |
+| 3 | Hosted Anthropic path, once built | **Yes** |
+| 4 | `find_nearest_chunks` — sqlite-vec retrieval | **No.** Supported vector stores are Chroma, LanceDB, Marqo, Milvus, Pinecone, Qdrant, Weaviate. sqlite-vec is a SQLite extension and will never appear on that list. |
+| 5 | `extract_text_spans`, `chunk_spans`, `ingest_document` | **No** — application orchestration, no library boundary |
+| 6 | `screen_for_emergency`, `apply_safety_framing` | **No** |
+| 7 | The abstention decision and its score | **No** |
+
+- **Reason 1 — it covers the wrong half.** Rows 4 through 7 are the spans that answer TaRa's actual debugging question: *why did this answer cite the wrong page?* All of them are application-level and must be hand-written regardless. OpenLLMetry covers the model-call layer, which is roughly two of the eight spans that matter here.
+- **Reason 2 — its privacy control is binary, and this project needs a middle setting.** `TRACELOOP_TRACE_CONTENT=false` disables prompt, completion, and embedding capture entirely; the default is capture-on, which would put raw PHI in spans. TaRa's requirement is neither: keep the clinical and cost content, drop the identity. That is what set-time redaction delivers, and OpenLLMetry has no equivalent setting.
+- **Reason 3 — adopting it now means two span-production paths.** The hand-written path must exist either way (reason 1), so adding auto-instrumentation on top buys partial coverage at the cost of a second mechanism to reason about.
+- **What is *not* a reason to reject it:** cloud lock-in. Verified — it exports to any OTLP endpoint, and the API-key check fires only when the default Traceloop SaaS endpoint is used with no custom exporter. Self-hosting is fully supported.
+- **Revisit trigger — Epic 2.** LangGraph's agent loop *is* a library boundary, which is exactly what auto-instrumentation is good at. Because both emit OpenTelemetry, adding it later is purely additive: no rework, no migration. At that point evaluate whether `TRACELOOP_TRACE_CONTENT=false` paired with hand-written redacted spans is a coherent combination, or whether the two mechanisms fight.
 
 ## 12. Verified facts underpinning these decisions
 
