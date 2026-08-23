@@ -28,10 +28,10 @@ REDACTED_ENTITIES = [
     "US_SSN",
     "LOCATION",
     "MEDICAL_LICENSE",
-    # Identifier shapes Presidio already detects. Without these the hits are
-    # computed and then discarded - an unlabelled member ID in a table cell
-    # matches US_DRIVER_LICENSE and nothing else.
-    "US_DRIVER_LICENSE",
+    # US_DRIVER_LICENSE deliberately NOT included: its pattern matches ICD-10
+    # diagnosis codes (E11.9, J45.909, I10), destroying the clinical content
+    # this module exists to preserve. The unlabelled-identifier gap it would
+    # have closed is a Task 3 measurement, not a guess.
     "US_PASSPORT",
     "US_ITIN",
     # HIPAA counts account and payment numbers as identifiers; premium-autopay
@@ -48,14 +48,17 @@ REDACTED_ENTITIES = [
     # destroy the clinical content this module exists to preserve.
 ]
 
-# Presidio defaults `global_regex_flags` to re.I|re.M|re.S. IGNORECASE would
-# make `[A-Z0-9]` match lowercase prose, so these recognizers drop it.
+# Presidio defaults `global_regex_flags` to re.I|re.M|re.S. A global IGNORECASE
+# makes `[A-Z0-9]` match lowercase prose, so it is dropped here and applied
+# inline to the LABEL only via `(?i:...)`. Labels appear in any case on real
+# cards ("MEMBER ID:", "Member Id:"); identifier values do not.
 _ID_REGEX_FLAGS = re.MULTILINE | re.DOTALL
 
-# The value must contain at least one digit. That single lookahead is what
-# separates "Member ID: W8842190113" from "Member ID cards are mailed" - an
-# identifier always carries a digit, an English word does not.
+# Two guards together. The value must contain a digit, which excludes ordinary
+# words. And the `[:#]` separator is MANDATORY, which excludes plan-year prose
+# like "Plan 2024" while keeping every real card format.
 _HAS_A_DIGIT = r"(?=[A-Z0-9-]*\d)"
+_LABEL_QUALIFIER = r"\s*(?i:ID|Identification|Number|No\.?|#)?\s*[:#]\s*"
 
 
 def _insurance_member_id_recognizer() -> PatternRecognizer:
@@ -66,9 +69,8 @@ def _insurance_member_id_recognizer() -> PatternRecognizer:
         patterns=[Pattern(
             name="labelled_member_id",
             regex=(
-                r"\b(?:Member|Subscriber|Insured|Policy|Certificate|Plan|MBI|Medicare)"
-                r"\s*(?:ID|Identification|Number|No\.?|#)?\s*[:#]?\s*"
-                + _HAS_A_DIGIT + r"[A-Z0-9][A-Z0-9-]{3,}\b"
+                r"\b(?i:Member|Subscriber|Insured|Policy|Certificate|Plan|MBI|Medicare)"
+                + _LABEL_QUALIFIER + _HAS_A_DIGIT + r"[A-Z0-9][A-Z0-9-]{3,}\b"
             ),
             score=0.85,
         )],
@@ -83,8 +85,7 @@ def _insurance_group_id_recognizer() -> PatternRecognizer:
         patterns=[Pattern(
             name="labelled_group_id",
             regex=(
-                r"\b(?:Group)"
-                r"\s*(?:ID|Identification|Number|No\.?|#)?\s*[:#]?\s*"
+                r"\b(?i:Group)" + _LABEL_QUALIFIER
                 + _HAS_A_DIGIT + r"[A-Z0-9][A-Z0-9-]{2,}\b"
             ),
             score=0.85,

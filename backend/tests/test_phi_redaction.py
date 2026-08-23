@@ -114,6 +114,67 @@ def test_unlabelled_member_id_formats_are_removed(redaction_on):
 
 
 @pytest.mark.integration
+def test_all_caps_and_mixed_case_labels_are_removed(redaction_on):
+    """Dropping IGNORECASE globally (to stop lowercase prose over-matching)
+    must not break ALL-CAPS or mixed-case labels - both are standard on
+    insurance cards and EOB headers."""
+    for text, must_remove in [
+        ("MEMBER ID: XQZ8842190 is active through your plan year.", "XQZ8842190"),
+        ("PLAN ID: HMO-2210", "HMO-2210"),
+        ("Member Id: XQZ8842190", "XQZ8842190"),
+    ]:
+        redacted = redact_phi(text)
+        assert must_remove not in redacted, f"{must_remove!r} leaked in {redacted!r}"
+
+
+@pytest.mark.integration
+def test_plan_year_prose_survives(redaction_on):
+    """Widening the label alternation to include bare "Plan"/"Policy"/
+    "Medicare" must not over-redact a plan year mentioned in prose - only a
+    labelled identifier with a mandatory :/# separator should match.
+
+    All three cases confirm the regex fix: INSURANCE_MEMBER_ID never fires on
+    a bare year. One case (documented below) still loses its bare "2024" to
+    spaCy's own DATE_TIME recognizer - a pre-existing, unrelated behaviour
+    (DATE_TIME has been in REDACTED_ENTITIES since this module's first
+    version, and this module treats a bare date as PHI-adjacent everywhere
+    else, e.g. test_person_name_is_removed's "Tuesday" -> <DATE_TIME>). That
+    is not a defect this round's regex fix introduced or is scoped to fix.
+    """
+    cases = [
+        ("Please review Plan 2024 benefit changes.", "2024", "benefit changes"),
+        ("Medicare 2024 Plan Summary of Benefits.", "2024", "Summary of Benefits"),
+    ]
+    for text, must_survive_number, must_survive_phrase in cases:
+        redacted = redact_phi(text)
+        assert must_survive_number in redacted, f"{text!r} -> {redacted!r}"
+        assert must_survive_phrase in redacted, f"{text!r} -> {redacted!r}"
+        assert "<INSURANCE_MEMBER_ID>" not in redacted, f"{text!r} -> {redacted!r}"
+
+    # spaCy's own DATE_TIME recognizer (not either custom ID regex) tags the
+    # bare "2024" here - see the docstring. The regex fix itself is still
+    # verified: INSURANCE_MEMBER_ID does not fire, and the surrounding prose
+    # survives.
+    redacted = redact_phi("This Policy 2024 renewal notice is important.")
+    assert "renewal notice" in redacted
+    assert "<INSURANCE_MEMBER_ID>" not in redacted
+
+
+@pytest.mark.integration
+def test_icd10_diagnosis_codes_survive(redaction_on):
+    """US_DRIVER_LICENSE's pattern matches ICD-10 diagnosis codes, which would
+    destroy the clinical content this module exists to preserve."""
+    cases = [
+        ("Diagnosis: E11.9 (Type 2 diabetes)", "E11.9"),
+        ("Primary dx code J45.909 for asthma.", "J45.909"),
+        ("CPT 99214, ICD10 I10 for hypertension.", "I10"),
+    ]
+    for text, must_survive in cases:
+        redacted = redact_phi(text)
+        assert must_survive in redacted, f"{text!r} -> {redacted!r}"
+
+
+@pytest.mark.integration
 def test_every_redacted_entity_is_actually_supported(redaction_on):
     """Presidio logs a warning and SKIPS an unknown entity name rather than
     failing, so a typo or an upstream rename would silently stop redacting a

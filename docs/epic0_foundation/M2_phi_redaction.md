@@ -152,6 +152,7 @@ a future tradeoff change is a one-line edit, not a redesign."
 - The engines are expensive to construct, so both are cached with `lru_cache`.
 - Presidio's default anonymizer operator replaces a match with `<ENTITY_TYPE>`, which is exactly what a trace wants: the shape of the value without the value.
 - **The NLP model backing the analyzer matters more than it looks.** `en_core_web_sm` returns zero PERSON entities for label:value fragments like `"Member: Priya Raghunathan"` and leaks the given name in ALL-CAPS headers like `"MEMBER NAME: JAMAL WASHINGTON"` — both formats are standard in benefits documents. `en_core_web_md` still misses the ALL-CAPS case. This plan pins `en_core_web_lg`; do not downgrade the model to chase install size without re-running the cases in Step 4's regression tests below.
+- **The two custom regexes went through two correction rounds — the current version in Step 3 is the one to trust.** Round 1 required a label token (`Member ID`, `Group Number`, …), which leaked every unlabelled or partial format (`Group: 55210`, `MBI: 1EG4-TE5-MK73`). Round 2 fixed that by making the label token optional and requiring a digit in the value, but dropped `IGNORECASE` *globally* to stop the digit-guard from matching lowercase prose — which broke the ALL-CAPS labels standard on insurance cards, over-redacted bare plan years (`"Plan 2024"`) once the label alternation widened, and (via `US_DRIVER_LICENSE`) started destroying ICD-10 codes like `E11.9`. The version below fixes all three: `(?i:...)` scopes case-insensitivity to the label only (the value stays case-sensitive), the `[:#]` separator is mandatory (excluding bare-word plan-year prose), and `US_DRIVER_LICENSE` is removed from `REDACTED_ENTITIES` entirely. If you are re-deriving these regexes from scratch, re-run every case in Step 4's tests — each round's fix silently broke something the previous round had just fixed.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -274,6 +275,67 @@ def test_unlabelled_member_id_formats_are_removed(redaction_on):
 
 
 @pytest.mark.integration
+def test_all_caps_and_mixed_case_labels_are_removed(redaction_on):
+    """Dropping IGNORECASE globally (to stop lowercase prose over-matching)
+    must not break ALL-CAPS or mixed-case labels - both are standard on
+    insurance cards and EOB headers."""
+    for text, must_remove in [
+        ("MEMBER ID: XQZ8842190 is active through your plan year.", "XQZ8842190"),
+        ("PLAN ID: HMO-2210", "HMO-2210"),
+        ("Member Id: XQZ8842190", "XQZ8842190"),
+    ]:
+        redacted = redact_phi(text)
+        assert must_remove not in redacted, f"{must_remove!r} leaked in {redacted!r}"
+
+
+@pytest.mark.integration
+def test_plan_year_prose_survives(redaction_on):
+    """Widening the label alternation to include bare "Plan"/"Policy"/
+    "Medicare" must not over-redact a plan year mentioned in prose - only a
+    labelled identifier with a mandatory :/# separator should match.
+
+    All three cases confirm the regex fix: INSURANCE_MEMBER_ID never fires on
+    a bare year. One case (documented below) still loses its bare "2024" to
+    spaCy's own DATE_TIME recognizer - a pre-existing, unrelated behaviour
+    (DATE_TIME has been in REDACTED_ENTITIES since this module's first
+    version, and this module treats a bare date as PHI-adjacent everywhere
+    else, e.g. test_person_name_is_removed's "Tuesday" -> <DATE_TIME>). That
+    is not a defect this round's regex fix introduced or is scoped to fix.
+    """
+    cases = [
+        ("Please review Plan 2024 benefit changes.", "2024", "benefit changes"),
+        ("Medicare 2024 Plan Summary of Benefits.", "2024", "Summary of Benefits"),
+    ]
+    for text, must_survive_number, must_survive_phrase in cases:
+        redacted = redact_phi(text)
+        assert must_survive_number in redacted, f"{text!r} -> {redacted!r}"
+        assert must_survive_phrase in redacted, f"{text!r} -> {redacted!r}"
+        assert "<INSURANCE_MEMBER_ID>" not in redacted, f"{text!r} -> {redacted!r}"
+
+    # spaCy's own DATE_TIME recognizer (not either custom ID regex) tags the
+    # bare "2024" here - see the docstring. The regex fix itself is still
+    # verified: INSURANCE_MEMBER_ID does not fire, and the surrounding prose
+    # survives.
+    redacted = redact_phi("This Policy 2024 renewal notice is important.")
+    assert "renewal notice" in redacted
+    assert "<INSURANCE_MEMBER_ID>" not in redacted
+
+
+@pytest.mark.integration
+def test_icd10_diagnosis_codes_survive(redaction_on):
+    """US_DRIVER_LICENSE's pattern matches ICD-10 diagnosis codes, which would
+    destroy the clinical content this module exists to preserve."""
+    cases = [
+        ("Diagnosis: E11.9 (Type 2 diabetes)", "E11.9"),
+        ("Primary dx code J45.909 for asthma.", "J45.909"),
+        ("CPT 99214, ICD10 I10 for hypertension.", "I10"),
+    ]
+    for text, must_survive in cases:
+        redacted = redact_phi(text)
+        assert must_survive in redacted, f"{text!r} -> {redacted!r}"
+
+
+@pytest.mark.integration
 def test_every_redacted_entity_is_actually_supported(redaction_on):
     """Presidio logs a warning and SKIPS an unknown entity name rather than
     failing, so a typo or an upstream rename would silently stop redacting a
@@ -306,12 +368,15 @@ def test_empty_text_is_returned_unchanged(redaction_on):
 
 The three name-recall tests pin the cases `en_core_web_lg` fixes that `en_core_web_sm`
 and `en_core_web_md` do not — see the model-choice bullet above. The two prose-survival
-and the unlabelled-format tests pin the F3/F4 regex fixes below: dropping
-`IGNORECASE` and requiring a digit in the value. `test_every_redacted_entity_is_actually_supported`
-guards against a silent Presidio-side rename or typo, since Presidio skips an
-unsupported entity name with a warning rather than raising. All of them exist so a
-future regression — a model downgrade, a regex rewrite, an entity-list typo — cannot
-pass review silently.
+and the unlabelled-format tests pin the F3/F4 regex fixes below: dropping global
+`IGNORECASE` and requiring a digit in the value. The ALL-CAPS/mixed-case,
+plan-year-prose, and ICD-10 tests pin the corrected version of that same fix — the
+first attempt at F3/F4 broke ALL-CAPS labels, over-redacted plan years, and (via
+`US_DRIVER_LICENSE`) destroyed ICD-10 codes; see the label/value guards below.
+`test_every_redacted_entity_is_actually_supported` guards against a silent
+Presidio-side rename or typo, since Presidio skips an unsupported entity name with a
+warning rather than raising. All of them exist so a future regression — a model
+downgrade, a regex rewrite, an entity-list typo — cannot pass review silently.
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
@@ -353,10 +418,10 @@ REDACTED_ENTITIES = [
     "US_SSN",
     "LOCATION",
     "MEDICAL_LICENSE",
-    # Identifier shapes Presidio already detects. Without these the hits are
-    # computed and then discarded - an unlabelled member ID in a table cell
-    # matches US_DRIVER_LICENSE and nothing else.
-    "US_DRIVER_LICENSE",
+    # US_DRIVER_LICENSE deliberately NOT included: its pattern matches ICD-10
+    # diagnosis codes (E11.9, J45.909, I10), destroying the clinical content
+    # this module exists to preserve. The unlabelled-identifier gap it would
+    # have closed is a Task 3 measurement, not a guess.
     "US_PASSPORT",
     "US_ITIN",
     # HIPAA counts account and payment numbers as identifiers; premium-autopay
@@ -373,14 +438,17 @@ REDACTED_ENTITIES = [
     # destroy the clinical content this module exists to preserve.
 ]
 
-# Presidio defaults `global_regex_flags` to re.I|re.M|re.S. IGNORECASE would
-# make `[A-Z0-9]` match lowercase prose, so these recognizers drop it.
+# Presidio defaults `global_regex_flags` to re.I|re.M|re.S. A global IGNORECASE
+# makes `[A-Z0-9]` match lowercase prose, so it is dropped here and applied
+# inline to the LABEL only via `(?i:...)`. Labels appear in any case on real
+# cards ("MEMBER ID:", "Member Id:"); identifier values do not.
 _ID_REGEX_FLAGS = re.MULTILINE | re.DOTALL
 
-# The value must contain at least one digit. That single lookahead is what
-# separates "Member ID: W8842190113" from "Member ID cards are mailed" - an
-# identifier always carries a digit, an English word does not.
+# Two guards together. The value must contain a digit, which excludes ordinary
+# words. And the `[:#]` separator is MANDATORY, which excludes plan-year prose
+# like "Plan 2024" while keeping every real card format.
 _HAS_A_DIGIT = r"(?=[A-Z0-9-]*\d)"
+_LABEL_QUALIFIER = r"\s*(?i:ID|Identification|Number|No\.?|#)?\s*[:#]\s*"
 
 
 def _insurance_member_id_recognizer() -> PatternRecognizer:
@@ -391,9 +459,8 @@ def _insurance_member_id_recognizer() -> PatternRecognizer:
         patterns=[Pattern(
             name="labelled_member_id",
             regex=(
-                r"\b(?:Member|Subscriber|Insured|Policy|Certificate|Plan|MBI|Medicare)"
-                r"\s*(?:ID|Identification|Number|No\.?|#)?\s*[:#]?\s*"
-                + _HAS_A_DIGIT + r"[A-Z0-9][A-Z0-9-]{3,}\b"
+                r"\b(?i:Member|Subscriber|Insured|Policy|Certificate|Plan|MBI|Medicare)"
+                + _LABEL_QUALIFIER + _HAS_A_DIGIT + r"[A-Z0-9][A-Z0-9-]{3,}\b"
             ),
             score=0.85,
         )],
@@ -408,8 +475,7 @@ def _insurance_group_id_recognizer() -> PatternRecognizer:
         patterns=[Pattern(
             name="labelled_group_id",
             regex=(
-                r"\b(?:Group)"
-                r"\s*(?:ID|Identification|Number|No\.?|#)?\s*[:#]?\s*"
+                r"\b(?i:Group)" + _LABEL_QUALIFIER
                 + _HAS_A_DIGIT + r"[A-Z0-9][A-Z0-9-]{2,}\b"
             ),
             score=0.85,
@@ -466,14 +532,16 @@ def redact_phi(text: str) -> str:
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `cd backend && python -m pytest tests/test_phi_redaction.py -q`
-Expected: `15 passed`
+Expected: `18 passed`
 
 If `test_insurance_group_id_is_removed` fails, check that the group-number regex tolerates the space in `Group # 55210`. Adjust the regex, not the test. If any of the name-recall or regex-fix regression tests fail, stop and report it — do not add a custom PERSON recognizer to force a pass; that is a Task 3 finding, to be measured before it is patched. Do not lower `score` to force a match.
+
+Note: a bare year adjacent to a label word (e.g. `"This Policy 2024 renewal notice is important."`) may still lose the year to spaCy's own `DATE_TIME` recognizer — unrelated to either custom regex, and not a defect this module's ID recognizers are scoped to fix (DATE_TIME has been in `REDACTED_ENTITIES` since this module's first version, and a bare date is treated as PHI-adjacent everywhere else in this suite).
 
 - [ ] **Step 5: Verify the full suite still passes**
 
 Run: `cd backend && python -m pytest -q 2>&1 | tail -1`
-Expected: `82 passed, 3 skipped, ...`
+Expected: `85 passed, 3 skipped, ...`
 
 - [ ] **Step 6: Commit**
 
