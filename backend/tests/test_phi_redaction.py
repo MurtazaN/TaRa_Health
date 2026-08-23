@@ -49,6 +49,31 @@ def test_clinical_content_survives_redaction(redaction_on):
     assert "$40" in redacted
 
 
+@pytest.mark.integration
+def test_name_in_label_value_format_is_removed(redaction_on):
+    """Benefits documents are label:value, not prose - the format that broke
+    en_core_web_sm entirely."""
+    redacted = redact_phi("Member: Priya Raghunathan  Specialist copay: $40")
+    assert "Priya" not in redacted
+    assert "Raghunathan" not in redacted
+    assert "$40" in redacted
+
+
+@pytest.mark.integration
+def test_all_caps_name_is_removed(redaction_on):
+    """Insurance cards and EOB headers print names in caps."""
+    redacted = redact_phi("MEMBER NAME: JAMAL WASHINGTON")
+    assert "JAMAL" not in redacted
+    assert "WASHINGTON" not in redacted
+
+
+@pytest.mark.integration
+def test_given_name_alone_is_not_left_behind(redaction_on):
+    """en_core_web_sm caught only the surname here, leaving the given name."""
+    redacted = redact_phi("Patient Priya Raghunathan was seen on Tuesday.")
+    assert "Priya" not in redacted
+
+
 def test_disabled_redaction_passes_text_through(monkeypatch):
     monkeypatch.setenv("TARA_PHI_REDACTION_ENABLED", "false")
     config.get_settings.cache_clear()

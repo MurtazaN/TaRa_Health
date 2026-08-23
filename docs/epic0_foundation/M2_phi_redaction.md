@@ -13,7 +13,7 @@
 
 **Design sections:** [Epic 0 README](README.md) §5 row 1, §6.2
 
-**Tech Stack:** Presidio (analyzer + anonymizer) · spaCy `en_core_web_sm`
+**Tech Stack:** Presidio (analyzer + anonymizer) · spaCy `en_core_web_lg`
 
 **Why this is its own module** (split from the original combined M2 on 2026-08-15):
 
@@ -52,7 +52,7 @@
 - Produces: `Settings.phi_redaction_enabled: bool`, `Settings.phi_redaction_nlp_model: str`. Task 2 reads both; M3 reads neither directly.
 
 **Context an engineer needs:**
-- **Presidio needs a spaCy language model at runtime.** Its default is `en_core_web_lg` (~600 MB). This plan pins `en_core_web_sm` (~12 MB), configured explicitly, so a laptop install and a CI runner stay light and deterministic. Accuracy improves with `en_core_web_lg`; swapping is a one-setting change, which is why the model name is configuration.
+- **Presidio needs a spaCy language model at runtime.** This plan pins `en_core_web_lg` (~427 MB on disk), configured explicitly. An earlier revision of this plan pinned `en_core_web_sm` (~12 MB) to keep laptop installs and CI runners light; Task 2's testing measured that `en_core_web_sm` returns **zero** entities for `"Member: Priya Raghunathan"` and leaks the given name in `"MEMBER NAME: JAMAL WASHINGTON"`, and that `en_core_web_md` still misses ALL-CAPS names — both formats are standard in benefits documents, so the smaller models fail this module's only job. Size is noise next to the local model this app already runs. The model name stays a setting, so it remains a one-line change if a future model changes the tradeoff again.
 - The OpenTelemetry dependencies are **not** added here — they belong to [M3](M3_execution_tracing.md) Task 1.
 
 - [ ] **Step 1: Add the dependencies**
@@ -74,9 +74,13 @@ In `backend/src/tara/config.py`, add inside `class Settings`, after the Timeouts
     # On by default: this module exists so infrastructure can carry clinical
     # content without carrying identity. A caller must never have to check it.
     phi_redaction_enabled: bool = True
-    # Presidio defaults to en_core_web_lg (~600MB). en_core_web_sm (~12MB) keeps
-    # a laptop install and a CI runner light; swap to _lg for better recall.
-    phi_redaction_nlp_model: str = "en_core_web_sm"
+    # en_core_web_lg (~427MB on disk) rather than the smaller models: measured
+    # 2026-08-15, en_core_web_sm returns ZERO entities for "Member: Priya
+    # Raghunathan" and leaks the given name in "MEMBER NAME: JAMAL WASHINGTON",
+    # while en_core_web_md still misses ALL-CAPS names. Both formats are
+    # standard in benefits documents, so the smaller models fail this module's
+    # only job. Size is noise next to the local model this app already runs.
+    phi_redaction_nlp_model: str = "en_core_web_lg"
 ```
 
 - [ ] **Step 3: Add the spaCy model download to the bootstrap script**
@@ -85,7 +89,9 @@ In `deployment/local/bootstrap.sh`, after the install step and before the data-s
 
 ```bash
 echo "==> Downloading the spaCy model Presidio needs"
-python -m spacy download en_core_web_sm
+# en_core_web_lg: the smaller models miss names in benefits-document formats
+# (ALL-CAPS headers, label:value fragments) - see config.py.
+python -m spacy download en_core_web_lg
 ```
 
 - [ ] **Step 4: Add the same download to the CI test job**
@@ -93,7 +99,9 @@ python -m spacy download en_core_web_sm
 In `.github/workflows/ci.yml`, in the `test` job only, insert before `- run: make test`:
 
 ```yaml
-      - run: python -m spacy download en_core_web_sm
+      # en_core_web_lg: the smaller models miss names in benefits-document
+      # formats (ALL-CAPS headers, label:value fragments) - see config.py.
+      - run: python -m spacy download en_core_web_lg
 ```
 
 - [ ] **Step 5: Document both settings**
@@ -105,14 +113,16 @@ Append to `.env.example`, in the same style as the existing sections:
 # On by default. Redaction is what makes tracing and hosted egress safe on a
 # health corpus; disable it only for local debugging on synthetic data.
 TARA_PHI_REDACTION_ENABLED=true
-# en_core_web_sm (12MB) keeps installs light; en_core_web_lg (600MB) has better recall.
-TARA_PHI_REDACTION_NLP_MODEL=en_core_web_sm
+# en_core_web_lg (~427MB): the smaller models miss names in benefits-document
+# formats (ALL-CAPS headers, label:value fragments) - see config.py for the
+# measured cases. Size is noise next to the local model this app already runs.
+TARA_PHI_REDACTION_NLP_MODEL=en_core_web_lg
 ```
 
 - [ ] **Step 6: Install and verify nothing changed**
 
 ```bash
-uv pip install -e "./backend[dev]" && python -m spacy download en_core_web_sm
+uv pip install -e "./backend[dev]" && python -m spacy download en_core_web_lg
 cd backend && python -m pytest -q 2>&1 | grep -E "passed|failed" | tail -1
 ```
 
@@ -127,9 +137,11 @@ git commit -m "build: add Presidio dependencies and PHI-redaction settings
 Both settings default to the safe position, so this commit changes
 nothing observable.
 
-Pins spaCy en_core_web_sm (12MB) over Presidio's en_core_web_lg
-default (600MB) so laptop and CI installs stay light; the model name
-is a setting, so upgrading recall is a config change."
+Pins spaCy en_core_web_lg (~427MB): Task 2's testing found the
+smaller models miss names in benefits-document formats (ALL-CAPS
+headers, label:value fragments), which is this module's only job.
+The model name stays a setting, so a future tradeoff change is a
+one-line edit, not a redesign."
 ```
 
 ---
@@ -149,6 +161,7 @@ is a setting, so upgrading recall is a config change."
 - Presidio's stock entity set does not cover insurance identifiers. Two custom `PatternRecognizer` instances add member and group numbers, which appear throughout benefits documents.
 - The engines are expensive to construct, so both are cached with `lru_cache`.
 - Presidio's default anonymizer operator replaces a match with `<ENTITY_TYPE>`, which is exactly what a trace wants: the shape of the value without the value.
+- **The NLP model backing the analyzer matters more than it looks.** `en_core_web_sm` returns zero PERSON entities for label:value fragments like `"Member: Priya Raghunathan"` and leaks the given name in ALL-CAPS headers like `"MEMBER NAME: JAMAL WASHINGTON"` — both formats are standard in benefits documents. `en_core_web_md` still misses the ALL-CAPS case. This plan pins `en_core_web_lg`; do not downgrade the model to chase install size without re-running the cases in Step 4's regression tests below.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -206,6 +219,31 @@ def test_clinical_content_survives_redaction(redaction_on):
     assert "$40" in redacted
 
 
+@pytest.mark.integration
+def test_name_in_label_value_format_is_removed(redaction_on):
+    """Benefits documents are label:value, not prose - the format that broke
+    en_core_web_sm entirely."""
+    redacted = redact_phi("Member: Priya Raghunathan  Specialist copay: $40")
+    assert "Priya" not in redacted
+    assert "Raghunathan" not in redacted
+    assert "$40" in redacted
+
+
+@pytest.mark.integration
+def test_all_caps_name_is_removed(redaction_on):
+    """Insurance cards and EOB headers print names in caps."""
+    redacted = redact_phi("MEMBER NAME: JAMAL WASHINGTON")
+    assert "JAMAL" not in redacted
+    assert "WASHINGTON" not in redacted
+
+
+@pytest.mark.integration
+def test_given_name_alone_is_not_left_behind(redaction_on):
+    """en_core_web_sm caught only the surname here, leaving the given name."""
+    redacted = redact_phi("Patient Priya Raghunathan was seen on Tuesday.")
+    assert "Priya" not in redacted
+
+
 def test_disabled_redaction_passes_text_through(monkeypatch):
     monkeypatch.setenv("TARA_PHI_REDACTION_ENABLED", "false")
     config.get_settings.cache_clear()
@@ -217,6 +255,10 @@ def test_disabled_redaction_passes_text_through(monkeypatch):
 def test_empty_text_is_returned_unchanged(redaction_on):
     assert redact_phi("") == ""
 ```
+
+The last three tests pin the cases `en_core_web_lg` fixes that `en_core_web_sm` and
+`en_core_web_md` do not — see the model-choice bullet above. They exist so a future
+model downgrade cannot pass review silently.
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
@@ -326,14 +368,14 @@ def redact_phi(text: str) -> str:
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `cd backend && python -m pytest tests/test_phi_redaction.py -q`
-Expected: `8 passed`
+Expected: `10 passed`
 
-If `test_insurance_group_id_is_removed` fails, check that the group-number regex tolerates the space in `Group # 55210`. Adjust the regex, not the test.
+If `test_insurance_group_id_is_removed` fails, check that the group-number regex tolerates the space in `Group # 55210`. Adjust the regex, not the test. If any of the three model-recall regression tests fail against `en_core_web_lg`, stop and report it — do not add a custom PERSON recognizer to force a pass; that is a Task 3 finding, to be measured before it is patched.
 
 - [ ] **Step 5: Verify the full suite still passes**
 
 Run: `cd backend && python -m pytest -q 2>&1 | tail -1`
-Expected: `75 passed, 3 skipped, ...`
+Expected: `77 passed, 3 skipped, ...`
 
 - [ ] **Step 6: Commit**
 

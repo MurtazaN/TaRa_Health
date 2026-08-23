@@ -17,7 +17,9 @@ echo "==> Installing backend with dev extras"
 uv pip install -e "./backend[dev]"
 
 echo "==> Downloading the spaCy model Presidio needs"
-python -m spacy download en_core_web_sm
+# en_core_web_lg (~427MB): the smaller models miss names in benefits-document
+# formats (ALL-CAPS headers, label:value fragments) - see config.py.
+python -m spacy download en_core_web_lg
 
 echo "==> Seeding .env (if absent)"
 [ -f .env ] || cp .env.example .env
