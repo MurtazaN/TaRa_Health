@@ -175,6 +175,92 @@ def test_icd10_diagnosis_codes_survive(redaction_on):
 
 
 @pytest.mark.integration
+def test_lowercase_and_mixed_case_values_are_removed(redaction_on):
+    """Round 2's (?i:...) scoping fixed the LABEL's case but left the VALUE
+    class as [A-Z0-9], which never matched a lowercase identifier - a
+    regression against this module's original, fully case-insensitive
+    version. "Member ID: xqz8842190" used to leak in full."""
+    for text, must_remove in [
+        ("Member ID: xqz8842190", "xqz8842190"),
+        ("MEMBER ID: xqz8842190", "xqz8842190"),
+        ("Member ID: Xqz8842190", "Xqz8842190"),
+    ]:
+        redacted = redact_phi(text)
+        assert must_remove not in redacted, f"{must_remove!r} leaked in {redacted!r}"
+
+
+@pytest.mark.integration
+def test_colon_bearing_plan_year_headers_survive_as_identifiers(redaction_on):
+    """A colon after the label ("Plan: 2024 benefit changes") used to satisfy
+    the old mandatory-separator guard, so a bare year or year range was
+    over-redacted as INSURANCE_MEMBER_ID. The _NOT_A_YEAR lookahead now
+    excludes any bare 4-digit run regardless of the separator.
+
+    Two of the five fully survive verbatim. The other three still lose their
+    year/range to spaCy's own DATE_TIME recognizer - a separate, pre-existing
+    behaviour unrelated to either custom regex (see test_plan_year_prose_survives
+    for the same interaction with a single year). The assertion this test
+    exists to make is that INSURANCE_MEMBER_ID never fires here; full-sentence
+    survival is asserted only where it actually holds.
+    """
+    fully_survives = [
+        "Plan: 2024 benefit changes",
+        "MBI: 2024",
+    ]
+    for text in fully_survives:
+        redacted = redact_phi(text)
+        assert redacted == text, f"{text!r} -> {redacted!r}"
+        assert "<INSURANCE_MEMBER_ID>" not in redacted
+
+    # DATE_TIME (not INSURANCE_MEMBER_ID) redacts the year/range in these -
+    # honest, out-of-scope finding, not a regex defect this round introduced.
+    date_time_intercepts = [
+        ("Insured: 2026 Plan Summary", "Plan Summary"),
+        ("Policy: 2024-2025 renewal", "renewal"),
+        ("Certificate: 2024-25 update", "update"),
+    ]
+    for text, must_survive_phrase in date_time_intercepts:
+        redacted = redact_phi(text)
+        assert must_survive_phrase in redacted, f"{text!r} -> {redacted!r}"
+        assert "<INSURANCE_MEMBER_ID>" not in redacted, f"{text!r} -> {redacted!r}"
+
+
+@pytest.mark.integration
+def test_durations_after_group_label_survive_as_identifiers(redaction_on):
+    """A short number-hyphen-word span after "Group:" used to read like a
+    short identifier ("Group: 30-day waiting period"). The _NOT_A_DURATION
+    lookahead now excludes day/week/month/year durations explicitly.
+
+    As with the plan-year headers above, INSURANCE_GROUP_ID correctly never
+    fires, but spaCy's own DATE_TIME recognizer still independently redacts
+    the duration span in all three cases - documented, not patched; narrowing
+    DATE_TIME is outside this round's (and this module's two custom
+    recognizers') scope.
+    """
+    cases = [
+        ("Group: 30-day waiting period applies.", "waiting period applies"),
+        ("Group: 90-day supply limit", "supply limit"),
+        ("Group: 42-year-old patient", "patient"),
+    ]
+    for text, must_survive_phrase in cases:
+        redacted = redact_phi(text)
+        assert must_survive_phrase in redacted, f"{text!r} -> {redacted!r}"
+        assert "<INSURANCE_GROUP_ID>" not in redacted, f"{text!r} -> {redacted!r}"
+
+
+@pytest.mark.integration
+def test_separator_free_labels_are_removed(redaction_on):
+    """The separator is optional (not mandatory) in this design, specifically
+    so "Member No. 12345" - no colon or hash at all - is still covered."""
+    for text, must_remove in [
+        ("Member No. 12345", "12345"),
+        ("Group No. 45678", "45678"),
+    ]:
+        redacted = redact_phi(text)
+        assert must_remove not in redacted, f"{must_remove!r} leaked in {redacted!r}"
+
+
+@pytest.mark.integration
 def test_every_redacted_entity_is_actually_supported(redaction_on):
     """Presidio logs a warning and SKIPS an unknown entity name rather than
     failing, so a typo or an upstream rename would silently stop redacting a

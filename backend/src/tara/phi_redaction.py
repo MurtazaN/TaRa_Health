@@ -49,16 +49,31 @@ REDACTED_ENTITIES = [
 ]
 
 # Presidio defaults `global_regex_flags` to re.I|re.M|re.S. A global IGNORECASE
-# makes `[A-Z0-9]` match lowercase prose, so it is dropped here and applied
-# inline to the LABEL only via `(?i:...)`. Labels appear in any case on real
-# cards ("MEMBER ID:", "Member Id:"); identifier values do not.
+# makes the label match in any case but also lets the value class match prose,
+# so it is dropped and applied inline per-token instead.
 _ID_REGEX_FLAGS = re.MULTILINE | re.DOTALL
 
-# Two guards together. The value must contain a digit, which excludes ordinary
-# words. And the `[:#]` separator is MANDATORY, which excludes plan-year prose
-# like "Plan 2024" while keeping every real card format.
-_HAS_A_DIGIT = r"(?=[A-Z0-9-]*\d)"
-_LABEL_QUALIFIER = r"\s*(?i:ID|Identification|Number|No\.?|#)?\s*[:#]\s*"
+# Identifiers are defined by EXCLUDING the non-identifier shapes that a label
+# is commonly followed by, rather than by guessing a positive shape. Three
+# earlier attempts at a positive shape each leaked or over-redacted.
+#
+# Excluded: a bare 4-digit year, which also covers "2024-2025" and "2024-25"
+# because \b matches before the hyphen.
+_NOT_A_YEAR = r"(?!\d{4}\b)"
+# Excluded: durations, which read like short identifiers after a label
+# ("Group: 30-day waiting period").
+_NOT_A_DURATION = r"(?!\d{1,3}-(?i:day|days|year|years|month|months|week|weeks)\b)"
+# An identifier always carries a digit; an English word does not.
+_HAS_A_DIGIT = r"(?=[A-Za-z0-9-]*\d)"
+# The value class is case-INSENSITIVE: real documents and OCR output both
+# produce lowercase identifiers. The 5-character floor is what excludes bare
+# years, which is why the separator below can stay optional.
+_ID_VALUE = (
+    _NOT_A_YEAR + _NOT_A_DURATION + _HAS_A_DIGIT + r"[A-Za-z0-9][A-Za-z0-9-]{4,}\b"
+)
+# The separator is OPTIONAL so "Member No. 12345" is covered; the value guards
+# above are what prevent prose from matching.
+_LABEL_QUALIFIER = r"\s*(?i:ID|Identification|Number|No\.?|#)?\s*[:#]?\s*"
 
 
 def _insurance_member_id_recognizer() -> PatternRecognizer:
@@ -70,7 +85,7 @@ def _insurance_member_id_recognizer() -> PatternRecognizer:
             name="labelled_member_id",
             regex=(
                 r"\b(?i:Member|Subscriber|Insured|Policy|Certificate|Plan|MBI|Medicare)"
-                + _LABEL_QUALIFIER + _HAS_A_DIGIT + r"[A-Z0-9][A-Z0-9-]{3,}\b"
+                + _LABEL_QUALIFIER + _ID_VALUE
             ),
             score=0.85,
         )],
@@ -78,16 +93,16 @@ def _insurance_member_id_recognizer() -> PatternRecognizer:
 
 
 def _insurance_group_id_recognizer() -> PatternRecognizer:
+    # Shares _ID_VALUE with the member recognizer. The previous {2,} vs {3,}
+    # split made this pattern strictly more fragile than its sibling for no
+    # stated reason.
     return PatternRecognizer(
         supported_entity=INSURANCE_GROUP_ID_ENTITY,
         name="InsuranceGroupIdRecognizer",
         global_regex_flags=_ID_REGEX_FLAGS,
         patterns=[Pattern(
             name="labelled_group_id",
-            regex=(
-                r"\b(?i:Group)" + _LABEL_QUALIFIER
-                + _HAS_A_DIGIT + r"[A-Z0-9][A-Z0-9-]{2,}\b"
-            ),
+            regex=r"\b(?i:Group)" + _LABEL_QUALIFIER + _ID_VALUE,
             score=0.85,
         )],
     )
