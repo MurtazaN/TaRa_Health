@@ -40,6 +40,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - run: uv pip install --system -e "./backend[dev]"
+      - run: python -m spacy download en_core_web_sm
       # No LM Studio on a hosted runner; the suite is offline by design
       # (conftest replaces the embedder with a deterministic fake).
       - run: make test

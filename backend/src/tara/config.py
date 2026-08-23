@@ -84,6 +84,14 @@ class Settings(BaseSettings):
     # ---- Timeouts ----
     llm_timeout_seconds: float = 60.0  # a stalled model can't hang a request forever (§3.5)
 
+    # ---- PHI redaction (README §6.2) ----
+    # On by default: this module exists so infrastructure can carry clinical
+    # content without carrying identity. A caller must never have to check it.
+    phi_redaction_enabled: bool = True
+    # Presidio defaults to en_core_web_lg (~600MB). en_core_web_sm (~12MB) keeps
+    # a laptop install and a CI runner light; swap to _lg for better recall.
+    phi_redaction_nlp_model: str = "en_core_web_sm"
+
     # ---- Upload limits (§3.1a) ----
     max_upload_bytes: int = _DEFAULT_MAX_UPLOAD_BYTES
     # Page ceiling for PDF parsing: bounds CPU/memory on a pathological (but small)

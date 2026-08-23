@@ -16,6 +16,9 @@ source .venv/bin/activate
 echo "==> Installing backend with dev extras"
 uv pip install -e "./backend[dev]"
 
+echo "==> Downloading the spaCy model Presidio needs"
+python -m spacy download en_core_web_sm
+
 echo "==> Seeding .env (if absent)"
 [ -f .env ] || cp .env.example .env
 
