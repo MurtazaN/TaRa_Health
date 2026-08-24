@@ -106,7 +106,7 @@
 
 ## 6. What to do next, concretely
 
-1. Complete [M1_repo_restructure.md](M1_repo_restructure.md).
-2. Complete [M2_observability.md](M2_observability.md).
+1. [M1_repo_restructure.md](M1_repo_restructure.md) — **done 2026-08-15**.
+2. Complete [M2_phi_redaction.md](M2_phi_redaction.md), then [M3_execution_tracing.md](M3_execution_tracing.md).
 3. Start a fresh brainstorm → plan cycle for **M4 only**, using `docs/epic1_grounded_qa/M4_grounded_answering.md` as the contract and §3.1 and §3.2 above as the deltas.
 4. Repeat per module, in the §2 order.

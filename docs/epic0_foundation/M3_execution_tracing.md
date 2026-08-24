@@ -1,354 +1,119 @@
-# Epic 0 · M2 — observability
+# Epic 0 · M3 — execution_tracing
 
 - **Parent:** [Epic 0 — Foundation](README.md) — overview · decisions · build order · global constraints.
-- **Seams:** depends on [M1](M1_repo_restructure.md). Instruments Epic 1 [M1 ingestion](../epic1_grounded_qa/M1_ingestion_pipeline.md) and [M3 retrieval](../epic1_grounded_qa/M3_retrieval.md); the answering spans land with Epic 1 M4 per [M3](M3_epic1_handoff.md) §3.1. Supplies `redact_phi()` to the Epic 1 hosted-egress path.
+- **Seams:** depends on [M1](M1_repo_restructure.md) and on `redact_phi()` from [M2](M2_phi_redaction.md). Instruments Epic 1 [M1 ingestion](../epic1_grounded_qa/M1_ingestion_pipeline.md) and [M3 retrieval](../epic1_grounded_qa/M3_retrieval.md); the answering spans land with Epic 1 M4 per [M4 §3.1](M4_epic1_handoff.md).
 
 ---
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans. Steps use checkbox (`- [ ]`) syntax.
 
-**Goal:** Make a request's internal execution visible as a trace, with protected health information stripped before it ever enters a span.
+**Goal:** Make a request's internal execution visible as a trace, so answer quality can be attributed to retrieval or to the model rather than guessed at.
 
-**Architecture:** A kernel-level `phi_redaction` module wraps Presidio. A new `execution_tracing` plane configures OpenTelemetry and exposes one `traced_span()` context manager that redacts every string attribute *at set time*. Arize Phoenix runs as a second Compose service and receives spans over OTLP. Tracing is off by default.
+**Architecture:** A new `execution_tracing` plane configures OpenTelemetry and exposes one `traced_span()` context manager. Every string attribute passes through M2's `redact_phi()` *at set time*, so protected health information never enters a span. Arize Phoenix runs as a second Compose service and receives spans over OTLP. Tracing is off by default.
 
-**Design sections:** [Epic 0 README](README.md) §5, §6.2, §7, §8.1
+**Design sections:** [Epic 0 README](README.md) §5 row 2, §6.1, §7, §8.1
 
-**Tech Stack:** OpenTelemetry Python SDK · OpenInference semantic conventions · Presidio (analyzer + anonymizer) · spaCy `en_core_web_sm` · Arize Phoenix
+**Tech Stack:** OpenTelemetry Python SDK · OTLP HTTP exporter · Arize Phoenix
+
+**Prerequisite:** [M2](M2_phi_redaction.md) must be complete. `redact_span_attributes()` calls `redact_phi()` directly; building this module first would mean either a wide-open trace or a stub.
 
 ## Global Constraints
 
 - See [README.md](README.md#global-constraints). Every task's requirements implicitly include that section.
-- **M2 is behaviour-neutral.** With `TARA_TRACING_ENABLED=false` (the default) nothing changes; the test suite must stay at `67 passed, 3 skipped` plus the new tests this phase adds.
-- **Redaction happens at attribute-set time, not at export time.** A value that never enters a span cannot leak through a misconfigured exporter.
+- **This module is behaviour-neutral.** With `TARA_TRACING_ENABLED=false` (the default) nothing changes; the suite must stay at its M2-completion count plus the tests this module adds.
+- **Redaction happens at attribute-set time, not at export time.** A value that never enters a span cannot leak through a misconfigured exporter or a backend swapped in later.
+- **Span attributes carry counts, scores, and identifiers — never chunk text or filenames.**
 
 ## File Structure
 
 | # | Path | Responsibility |
 |---|---|---|
-| 1 | `backend/src/tara/phi_redaction.py` | Kernel. Presidio wrapper: `redact_phi(text) -> str`. |
-| 2 | `backend/src/tara/execution_tracing/__init__.py` | Empty, per the existing package convention. |
-| 3 | `backend/src/tara/execution_tracing/tracer_setup.py` | Plane. Installs the tracer provider once; `get_tracer()`. |
-| 4 | `backend/src/tara/execution_tracing/span_redaction.py` | Plane. `redact_span_attributes(dict) -> dict`. |
-| 5 | `backend/src/tara/execution_tracing/span_emitter.py` | Plane. `traced_span()` context manager — the only way this app makes spans. |
-| 6 | `backend/tests/test_phi_redaction.py` | Kernel tests. |
-| 7 | `backend/tests/execution_tracing/test_span_redaction.py` | Redaction-of-attributes tests. |
-| 8 | `backend/tests/execution_tracing/test_span_emitter.py` | Span emission tests, using an in-memory exporter. |
+| 1 | `backend/src/tara/execution_tracing/__init__.py` | Empty, per the existing package convention. |
+| 2 | `backend/src/tara/execution_tracing/span_redaction.py` | `redact_span_attributes(dict) -> dict`. |
+| 3 | `backend/src/tara/execution_tracing/tracer_setup.py` | Installs the tracer provider once; `get_tracer()`. |
+| 4 | `backend/src/tara/execution_tracing/span_emitter.py` | `traced_span()` — the only way this app makes spans. |
+| 5 | `backend/tests/execution_tracing/test_span_redaction.py` | Redaction-of-attributes tests. |
+| 6 | `backend/tests/execution_tracing/test_span_emitter.py` | Span emission tests, using an in-memory exporter. |
 
 ---
 
-### Task 1: Add the observability dependencies and settings
+### Task 1: Add the OpenTelemetry dependencies and tracing settings
 
 **Files:**
 - Modify: `backend/pyproject.toml`
 - Modify: `backend/src/tara/config.py`
-- Modify: `deployment/local/bootstrap.sh`
-- Modify: `.github/workflows/ci.yml`
+- Modify: `.env.example`
 
 **Interfaces:**
-- Consumes: M1 Task 2's repaired manifest.
-- Produces: `Settings.tracing_enabled: bool`, `Settings.otlp_endpoint: str`, `Settings.service_name: str`, `Settings.phi_redaction_enabled: bool`, `Settings.phi_redaction_nlp_model: str`. Every later task in this phase reads these.
+- Consumes: M1's repaired manifest; M2's completed redaction module.
+- Produces: `Settings.tracing_enabled: bool`, `Settings.otlp_endpoint: str`, `Settings.service_name: str`. Tasks 3 and 6 read these.
 
 **Context an engineer needs:**
-- **Presidio needs a spaCy language model at runtime.** Its default is `en_core_web_lg` (~600 MB). This plan pins `en_core_web_sm` (~12 MB) instead, configured explicitly, so a laptop install and a CI runner both stay light and deterministic. Accuracy improves with `en_core_web_lg`; swapping is a one-setting change, which is why the model name is configuration.
-- Every new setting defaults to off or safe, so this task alone changes nothing.
+- The Presidio dependencies and the `phi_redaction_*` settings already landed in [M2](M2_phi_redaction.md) Task 1. Do not re-add them.
+- Tracing defaults to **off** because a span carries the user's question and retrieved document text. Redaction is the second line of defence, not the first.
 
 - [ ] **Step 1: Add the dependencies**
 
 In `backend/pyproject.toml`, add to `dependencies`:
 
 ```toml
-    # Execution tracing (vendor-neutral; the backend is a config swap)
+    # Execution tracing (vendor-neutral OTLP; the backend is a config swap)
     "opentelemetry-sdk>=1.27",
     "opentelemetry-exporter-otlp-proto-http>=1.27",
-
-    # PHI redaction before any span export or hosted egress
-    "presidio-analyzer>=2.2",
-    "presidio-anonymizer>=2.2",
 ```
 
-**Deliberately not added yet:** `openinference-semantic-conventions`. It supplies the standard attribute names for *model-call* spans (prompt, completion, token counts). M2 instruments ingestion and retrieval, which have no model-call spans, so importing it here would add a dependency with no call site. It arrives with M4 — see M3 §3.1.
+**Deliberately not added:** `openinference-semantic-conventions` supplies attribute names for *model-call* spans (prompt, completion, token counts). This module instruments ingestion and retrieval, which have no model-call spans, so it would be a dependency with no call site. It arrives with Epic 1 M4 — see [M4 §3.1](M4_epic1_handoff.md).
+
+**Also deliberately not added:** OpenLLMetry. See [README §11](README.md) for the recorded reasoning and its revisit trigger.
 
 - [ ] **Step 2: Add the settings**
 
-In `backend/src/tara/config.py`, add inside `class Settings`, after the Timeouts block:
+In `backend/src/tara/config.py`, add inside `class Settings`, directly after the PHI-redaction block M2 created:
 
 ```python
-    # ---- Execution tracing (spec §5) ----
+    # ---- Execution tracing (README §6.1) ----
     # Off by default: a span carries the question and retrieved document text.
     # `span_redaction` strips PHI before any value reaches a span, so a trace
     # shows retrieval behaviour without carrying identity.
     tracing_enabled: bool = False
     otlp_endpoint: str = "http://localhost:6006/v1/traces"
     service_name: str = "tara-backend"
-
-    # ---- PHI redaction (spec §6.2) ----
-    phi_redaction_enabled: bool = True
-    # Presidio defaults to en_core_web_lg (~600MB). en_core_web_sm (~12MB) keeps
-    # a laptop install and a CI runner light; swap to _lg for better recall.
-    phi_redaction_nlp_model: str = "en_core_web_sm"
 ```
 
-- [ ] **Step 3: Add the spaCy model download to the bootstrap script**
+- [ ] **Step 3: Document the settings**
 
-In `deployment/local/bootstrap.sh`, after the install step, insert:
+Append to `.env.example`:
 
 ```bash
-echo "==> Downloading the spaCy model Presidio needs"
-python -m spacy download en_core_web_sm
+# ---- Execution tracing ----
+# Off by default. Spans carry the question and retrieved text; PHI redaction
+# runs before any value reaches a span, but tracing is still opt-in.
+TARA_TRACING_ENABLED=false
+TARA_OTLP_ENDPOINT=http://localhost:6006/v1/traces
+TARA_SERVICE_NAME=tara-backend
 ```
 
-- [ ] **Step 4: Add the same download to the CI test job**
-
-In `.github/workflows/ci.yml`, in the `test` job only, insert before `- run: make test`:
-
-```yaml
-      - run: python -m spacy download en_core_web_sm
-```
-
-- [ ] **Step 5: Install and verify nothing changed**
+- [ ] **Step 4: Install and verify nothing changed**
 
 ```bash
-uv pip install -e "./backend[dev]" && python -m spacy download en_core_web_sm
-cd backend && python -m pytest -q 2>&1 | tail -1
+uv pip install -e "./backend[dev]"
+cd backend && python -m pytest -q 2>&1 | grep -E "passed|failed" | tail -1
 ```
 
-Expected: `67 passed, 3 skipped, ...`
-
-- [ ] **Step 6: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add backend/pyproject.toml backend/src/tara/config.py deployment/local/bootstrap.sh .github/workflows/ci.yml
-git commit -m "build: add tracing and PHI-redaction dependencies and settings
+git add backend/pyproject.toml backend/src/tara/config.py .env.example
+git commit -m "build: add OpenTelemetry dependencies and tracing settings
 
-OpenTelemetry SDK, OTLP HTTP exporter, OpenInference conventions,
-and Presidio. All five new settings default to off or safe, so this
-commit changes nothing observable.
-
-Pins spaCy en_core_web_sm (12MB) over Presidio's en_core_web_lg
-default (600MB) so laptop and CI installs stay light; the model name
-is a setting, so upgrading recall is a config change."
+Tracing defaults to off because a span carries the question and the
+retrieved document text. Instrumentation is vendor-neutral OTLP, so the
+viewing backend is an endpoint change rather than a code change."
 ```
 
 ---
 
-### Task 2: Build the PHI redaction module
-
-**Files:**
-- Create: `backend/src/tara/phi_redaction.py`
-- Test: `backend/tests/test_phi_redaction.py`
-
-**Interfaces:**
-- Consumes: `Settings.phi_redaction_enabled`, `Settings.phi_redaction_nlp_model` from Task 1.
-- Produces: `redact_phi(text: str) -> str`. Consumed by Task 3 (`span_redaction`) and, at Epic 1 M4, by the hosted-egress path.
-
-**Context an engineer needs:**
-- This is a **kernel root module**, not a package — it is one concept, and the naming rules forbid one-concept packages.
-- Presidio's stock entity set does not cover insurance identifiers. Two custom `PatternRecognizer` instances add member and group numbers, which appear throughout benefits documents.
-- The engines are expensive to construct, so both are cached with `lru_cache`.
-- Presidio's default anonymizer operator replaces a match with `<ENTITY_TYPE>`, which is exactly what a trace wants: the shape of the value without the value.
-
-- [ ] **Step 1: Write the failing tests**
-
-Create `backend/tests/test_phi_redaction.py`:
-
-```python
-"""PHI redaction is what makes tracing safe on a health corpus - test it hard."""
-from __future__ import annotations
-
-import pytest
-
-from tara import config
-from tara.phi_redaction import redact_phi
-
-
-@pytest.fixture
-def redaction_on(monkeypatch):
-    monkeypatch.setenv("TARA_PHI_REDACTION_ENABLED", "true")
-    config.get_settings.cache_clear()
-    yield
-    config.get_settings.cache_clear()
-
-
-@pytest.mark.integration
-def test_person_name_is_removed(redaction_on):
-    redacted = redact_phi("Patient Michael Okonkwo was seen on Tuesday.")
-    assert "Michael Okonkwo" not in redacted
-    assert "<PERSON>" in redacted
-
-
-@pytest.mark.integration
-def test_phone_number_is_removed(redaction_on):
-    redacted = redact_phi("Call the office at 617-555-0142 to confirm.")
-    assert "617-555-0142" not in redacted
-
-
-@pytest.mark.integration
-def test_insurance_member_id_is_removed(redaction_on):
-    redacted = redact_phi("Member ID: XQZ8842190 is active through December.")
-    assert "XQZ8842190" not in redacted
-    assert "<INSURANCE_MEMBER_ID>" in redacted
-
-
-@pytest.mark.integration
-def test_insurance_group_id_is_removed(redaction_on):
-    redacted = redact_phi("Group # 55210 covers the specialist visit.")
-    assert "<INSURANCE_GROUP_ID>" in redacted
-
-
-@pytest.mark.integration
-def test_clinical_content_survives_redaction(redaction_on):
-    """The point of redaction is to keep the medicine and drop the identity."""
-    redacted = redact_phi("Michael Okonkwo has a specialist copay of $40.")
-    assert "specialist copay" in redacted
-    assert "$40" in redacted
-
-
-def test_disabled_redaction_passes_text_through(monkeypatch):
-    monkeypatch.setenv("TARA_PHI_REDACTION_ENABLED", "false")
-    config.get_settings.cache_clear()
-    original = "Patient Michael Okonkwo, member ID XQZ8842190."
-    assert redact_phi(original) == original
-    config.get_settings.cache_clear()
-
-
-def test_empty_text_is_returned_unchanged(redaction_on):
-    assert redact_phi("") == ""
-```
-
-- [ ] **Step 2: Run the tests to verify they fail**
-
-Run: `cd backend && python -m pytest tests/test_phi_redaction.py -q`
-Expected: FAIL with `ModuleNotFoundError: No module named 'tara.phi_redaction'`
-
-- [ ] **Step 3: Write the implementation**
-
-Create `backend/src/tara/phi_redaction.py`:
-
-```python
-"""Removes protected health information from text before it leaves the process.
-
-Self-hosting the trace backend protects the destination; this module protects
-the payload. A redacted span keeps the clinical and cost content a trace exists
-to show, while dropping the identity that makes it protected health information.
-"""
-from __future__ import annotations
-
-from functools import lru_cache
-
-from presidio_analyzer import AnalyzerEngine, Pattern, PatternRecognizer
-from presidio_analyzer.nlp_engine import NlpEngineProvider
-from presidio_anonymizer import AnonymizerEngine
-
-from tara.config import get_settings
-
-# Insurance identifiers Presidio's stock entity set does not cover. They appear
-# throughout benefits summaries and explanation-of-benefits documents.
-INSURANCE_MEMBER_ID_ENTITY = "INSURANCE_MEMBER_ID"
-INSURANCE_GROUP_ID_ENTITY = "INSURANCE_GROUP_ID"
-
-REDACTED_ENTITIES = [
-    "PERSON",
-    "DATE_TIME",
-    "PHONE_NUMBER",
-    "EMAIL_ADDRESS",
-    "US_SSN",
-    "LOCATION",
-    "MEDICAL_LICENSE",
-    INSURANCE_MEMBER_ID_ENTITY,
-    INSURANCE_GROUP_ID_ENTITY,
-]
-
-
-def _insurance_member_id_recognizer() -> PatternRecognizer:
-    return PatternRecognizer(
-        supported_entity=INSURANCE_MEMBER_ID_ENTITY,
-        patterns=[Pattern(
-            name="member_id",
-            regex=r"(?:Member|Subscriber)\s*(?:ID|Number|No\.?|#)\s*[:#]?\s*[A-Z0-9][A-Z0-9-]{4,}",
-            score=0.85,
-        )],
-    )
-
-
-def _insurance_group_id_recognizer() -> PatternRecognizer:
-    return PatternRecognizer(
-        supported_entity=INSURANCE_GROUP_ID_ENTITY,
-        patterns=[Pattern(
-            name="group_id",
-            regex=r"(?:Group)\s*(?:ID|Number|No\.?|#)\s*[:#]?\s*[A-Z0-9][A-Z0-9-]{3,}",
-            score=0.85,
-        )],
-    )
-
-
-@lru_cache(maxsize=1)
-def _analyzer_engine() -> AnalyzerEngine:
-    """Build the analyzer once. Constructing it loads a language model."""
-    nlp_engine = NlpEngineProvider(nlp_configuration={
-        "nlp_engine_name": "spacy",
-        "models": [{
-            "lang_code": "en",
-            "model_name": get_settings().phi_redaction_nlp_model,
-        }],
-    }).create_engine()
-    analyzer_engine = AnalyzerEngine(nlp_engine=nlp_engine, supported_languages=["en"])
-    analyzer_engine.registry.add_recognizer(_insurance_member_id_recognizer())
-    analyzer_engine.registry.add_recognizer(_insurance_group_id_recognizer())
-    return analyzer_engine
-
-
-@lru_cache(maxsize=1)
-def _anonymizer_engine() -> AnonymizerEngine:
-    return AnonymizerEngine()
-
-
-def redact_phi(text: str) -> str:
-    """Return `text` with PHI entities replaced by `<ENTITY_TYPE>` placeholders.
-
-    A no-op when `phi_redaction_enabled` is false or the text is empty, so the
-    caller never has to branch.
-    """
-    if not text or not get_settings().phi_redaction_enabled:
-        return text
-    analyzer_results = _analyzer_engine().analyze(
-        text=text, language="en", entities=REDACTED_ENTITIES,
-    )
-    if not analyzer_results:
-        return text
-    return _anonymizer_engine().anonymize(
-        text=text, analyzer_results=analyzer_results,
-    ).text
-```
-
-- [ ] **Step 4: Run the tests to verify they pass**
-
-Run: `cd backend && python -m pytest tests/test_phi_redaction.py -q`
-Expected: `8 passed`
-
-If `test_insurance_group_id_is_removed` fails, check that the group-number regex tolerates the space in `Group # 55210`. Adjust the regex, not the test.
-
-- [ ] **Step 5: Verify the full suite still passes**
-
-Run: `cd backend && python -m pytest -q 2>&1 | tail -1`
-Expected: `75 passed, 3 skipped, ...`
-
-- [ ] **Step 6: Commit**
-
-```bash
-git add backend/src/tara/phi_redaction.py backend/tests/test_phi_redaction.py
-git commit -m "feat: add PHI redaction over Presidio
-
-Kernel root module (one concept, so not a package). Wraps Presidio's
-analyzer and anonymizer, adding two custom recognizers for insurance
-member and group identifiers that the stock entity set misses.
-
-Keeps clinical and cost content intact while dropping identity - that
-separation is what makes tracing a health corpus safe."
-```
-
----
-
-### Task 3: Build the span redaction helper
+### Task 2: Build the span redaction helper
 
 **Files:**
 - Create: `backend/src/tara/execution_tracing/__init__.py` (empty)
@@ -357,8 +122,8 @@ separation is what makes tracing a health corpus safe."
 - Test: `backend/tests/execution_tracing/test_span_redaction.py`
 
 **Interfaces:**
-- Consumes: `redact_phi(text) -> str` from Task 2.
-- Produces: `redact_span_attributes(attributes: dict[str, Any]) -> dict[str, Any]`. Task 5's `traced_span()` calls it.
+- Consumes: `redact_phi(text) -> str` from [M2](M2_phi_redaction.md).
+- Produces: `redact_span_attributes(attributes: dict[str, Any]) -> dict[str, Any]`. Task 4's `traced_span()` calls it.
 
 **Context an engineer needs:**
 - Non-string values pass through untouched. Counts, scores, and token totals carry no identity, and they are precisely the numbers a trace exists to show.
@@ -468,7 +233,7 @@ enters a span cannot leak through a swapped exporter."
 
 ---
 
-### Task 4: Configure the tracer provider
+### Task 3: Configure the tracer provider
 
 **Files:**
 - Create: `backend/src/tara/execution_tracing/tracer_setup.py`
@@ -476,7 +241,7 @@ enters a span cannot leak through a swapped exporter."
 
 **Interfaces:**
 - Consumes: `Settings.tracing_enabled`, `Settings.otlp_endpoint`, `Settings.service_name` from Task 1.
-- Produces: `configure_tracing() -> None` and `get_tracer() -> Tracer`. Task 5's `traced_span()` calls `get_tracer()`.
+- Produces: `configure_tracing() -> None` and `get_tracer() -> Tracer`. Task 4's `traced_span()` calls `get_tracer()`.
 
 **Context an engineer needs:**
 - `configure_tracing()` must be idempotent and safe to call when tracing is disabled — that is what keeps this phase behaviour-neutral.
@@ -568,7 +333,7 @@ Expected: `recording: False` — the no-op tracer, because `tracing_enabled` def
 - [ ] **Step 4: Verify the full suite still passes**
 
 Run: `cd backend && python -m pytest -q 2>&1 | tail -1`
-Expected: `79 passed, 3 skipped, ...`
+Expected: the M2-completion count plus this module's new tests.
 
 - [ ] **Step 5: Commit**
 
@@ -585,15 +350,15 @@ tracer - so instrumented code never branches on whether tracing is on."
 
 ---
 
-### Task 5: Build the span emitter
+### Task 4: Build the span emitter
 
 **Files:**
 - Create: `backend/src/tara/execution_tracing/span_emitter.py`
 - Test: `backend/tests/execution_tracing/test_span_emitter.py`
 
 **Interfaces:**
-- Consumes: `get_tracer()` from Task 4, `redact_span_attributes()` from Task 3.
-- Produces: `traced_span(span_name: str, **attributes) -> Iterator[Span]` and `record_span_attribute(span, attribute_name, attribute_value) -> None`. Task 6 calls both.
+- Consumes: `get_tracer()` from Task 3, `redact_span_attributes()` from Task 2.
+- Produces: `traced_span(span_name: str, **attributes) -> Iterator[Span]` and `record_span_attribute(span, attribute_name, attribute_value) -> None`. Task 5 calls both.
 
 **Context an engineer needs:**
 - `traced_span()` is the **only** way this application creates spans. Centralizing it is what guarantees redaction cannot be forgotten at a call site.
@@ -732,7 +497,7 @@ Expected: `5 passed`
 - [ ] **Step 5: Verify the full suite still passes**
 
 Run: `cd backend && python -m pytest -q 2>&1 | tail -1`
-Expected: `84 passed, 3 skipped, ...`
+Expected: the M2-completion count plus this module's new tests.
 
 - [ ] **Step 6: Commit**
 
@@ -750,14 +515,14 @@ on actual spans rather than on a mock."
 
 ---
 
-### Task 6: Instrument ingestion and retrieval
+### Task 5: Instrument ingestion and retrieval
 
 **Files:**
 - Modify: `backend/src/tara/document_ingestion/ingestion_pipeline.py`
 - Modify: `backend/src/tara/semantic_search/chunk_retriever.py`
 
 **Interfaces:**
-- Consumes: `traced_span()`, `record_span_attribute()` from Task 5.
+- Consumes: `traced_span()`, `record_span_attribute()` from Task 4.
 - Produces: spans named `ingest_document`, `extract_text_spans`, `chunk_spans`, `embed_chunks`, `retrieve_chunks`, `embed_query`, `find_nearest_chunks`. Epic 1 M4 adds the answering spans.
 
 **Context an engineer needs:**
@@ -861,7 +626,7 @@ and indenting the remainder of the function body one level.
 - [ ] **Step 3: Verify behaviour is unchanged**
 
 Run: `cd backend && python -m pytest -q 2>&1 | tail -1`
-Expected: `84 passed, 3 skipped, ...` — instrumentation must not change any test outcome.
+Expected: the M2-completion count plus this module's new tests. — instrumentation must not change any test outcome.
 
 - [ ] **Step 4: Lint and typecheck**
 
@@ -888,7 +653,7 @@ Epic 1 M4 alongside it."
 
 ---
 
-### Task 7: Add Phoenix to the stack and verify a trace end to end
+### Task 6: Add Phoenix to the stack and verify a trace end to end
 
 **Files:**
 - Modify: `deployment/docker/compose.yaml`
@@ -1022,9 +787,9 @@ Verified end to end via /upload, since /ask cannot run until M5."
 
 ---
 
-## M2 acceptance
+## M3 acceptance
 
-- [ ] `make test` reports `84 passed, 3 skipped`.
+- [ ] `make test` reports the M2-completion count plus this module's new tests, with no pre-existing test changed.
 - [ ] `make lint` and `make typecheck` are clean.
 - [ ] With `TARA_TRACING_ENABLED=false` (the default), `get_tracer()` returns a non-recording span — nothing changed for a developer who has not opted in.
 - [ ] `make up`, then an upload, produces an `ingest_document` trace in Phoenix with child spans and numeric attributes.

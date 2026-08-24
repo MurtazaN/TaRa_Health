@@ -1,7 +1,7 @@
 # Epic 0 · M1 — repo_restructure
 
 - **Parent:** [Epic 0 — Foundation](README.md) — overview · decisions · build order · global constraints.
-- **Seams:** creates the layout every later module builds in. [M2](M2_observability.md) and Epic 1 M4 both depend on it landing first; running it after M4 means moving M4's files twice.
+- **Seams:** creates the layout every later module builds in. [M2](M2_phi_redaction.md), [M3](M3_execution_tracing.md), and Epic 1 M4 all depend on it landing first; running it after M4 means moving M4's files twice.
 
 ---
 
