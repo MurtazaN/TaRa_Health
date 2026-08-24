@@ -33,6 +33,14 @@ from tests.fixtures.phi_recall_cases import (
 # test_aggregate_recall_meets_the_gate for the true, ungated number.
 REQUIRED_RECALL = 1.0
 
+# Freezing these counts is what stops the gate being passed dishonestly. A
+# genuine failure could otherwise be moved into a gap list with a plausible
+# reason string, shrinking the gated denominator until CI went green without
+# redaction improving at all. Raising either number is a deliberate act that
+# has to be justified in review.
+EXPECTED_RECALL_GAP_COUNT = 6
+EXPECTED_SURVIVAL_GAP_COUNT = 6
+
 
 @pytest.fixture(autouse=True)
 def redaction_on(monkeypatch):
@@ -124,6 +132,18 @@ def test_aggregate_recall_meets_the_gate(capsys):
     assert recall_gated >= REQUIRED_RECALL, (
         f"gated recall {recall_gated:.1%} below gate {REQUIRED_RECALL:.0%} "
         "on cases NOT already listed in RECALL_GAP_REASONS"
+    )
+
+
+def test_gap_lists_are_frozen():
+    """A new gap must be an explicit, visible decision - never a quiet edit."""
+    assert len(RECALL_GAP_REASONS) == EXPECTED_RECALL_GAP_COUNT, (
+        "Recall-gap count changed. If you are adding a gap, raise "
+        "EXPECTED_RECALL_GAP_COUNT deliberately and say why in the reason "
+        "string. If you FIXED one, lower it - and thank you."
+    )
+    assert len(SURVIVAL_GAP_REASONS) == EXPECTED_SURVIVAL_GAP_COUNT, (
+        "Survival-gap count changed. Same rule as above."
     )
 
 

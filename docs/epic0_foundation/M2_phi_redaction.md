@@ -732,7 +732,9 @@ PHI_RECALL_CASES: tuple[PhiRecallCase, ...] = (
     #  - a hyphenated surname and a name with a particle ("van der Berg")
     #  - a prescription label with prescriber and patient both named
     #  - a date written as "March 14, 2026" rather than numerically
-    #  - a claim number that must NOT be redacted (it identifies a claim, not a person)
+    #  - a claim number, which IS PHI: HIPAA Safe Harbor's catch-all category
+    #    (45 CFR 164.514(b)(2)(i)(R)) covers it, because the payer holds a
+    #    direct crosswalk from claim number to member identity
 )
 ```
 

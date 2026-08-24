@@ -96,19 +96,22 @@ PHI_RECALL_CASES: tuple[PhiRecallCase, ...] = (
         must_remove=("45678",),
     ),
     # --- Pinned: already surviving correctly ---
-    # Measured independently against the current code rather than trusted from
-    # the prior rounds' notes. Two entries below (marked in comments) turned
-    # out to only partially survive under direct measurement; their
-    # must_survive tuples are scoped to the substring actually confirmed to
-    # survive, and the full discrepancy is recorded in the Task 3 report
-    # rather than asserted here as if it held.
+    # Measured independently against the current code rather than trusted
+    # from the prior rounds' notes. Two entries below turned out to only
+    # partially survive under direct measurement, both to the same DATE_TIME
+    # defect as the dedicated gap cases further down; they carry their full,
+    # un-narrowed must_survive content and are listed in SURVIVAL_GAP_REASONS
+    # so they report as xfail rather than passing on a shrunk assertion.
     PhiRecallCase(
         label="pinned_member_id_prose_survives",
         text="Your Member ID cards are mailed within ten business days.",
         must_remove=(),
-        # "ten business days" is independently destroyed by DATE_TIME (same
-        # root cause as the parked gap below) - see the Task 3 report.
-        must_survive=("cards are mailed",),
+        # Full expected survival, not narrowed to the part that happens to
+        # pass: "ten business days" is destroyed by DATE_TIME (same parked
+        # ruling as the dedicated DATE_TIME gap cases below), so this is
+        # listed in SURVIVAL_GAP_REASONS and reports as xfail rather than
+        # silently passing on a shrunk assertion.
+        must_survive=("Your Member ID cards are mailed within ten business days.",),
     ),
     PhiRecallCase(
         label="pinned_group_number_prose_survives",
@@ -132,9 +135,13 @@ PHI_RECALL_CASES: tuple[PhiRecallCase, ...] = (
         label="pinned_plan_gold_ppo_2026_survives",
         text="Plan: Gold PPO 2026",
         must_remove=(),
-        # "2026" is independently destroyed by DATE_TIME under direct
-        # measurement - see the Task 3 report.
-        must_survive=("Gold PPO",),
+        # Full expected survival, not narrowed: "2026" is destroyed by
+        # DATE_TIME (confirmed deterministic; "Plan: Silver HMO 2026" survives
+        # unchanged, so this is a token-sequence-specific spaCy quirk, not a
+        # blanket "year after Plan:" rule). Listed in SURVIVAL_GAP_REASONS so
+        # it reports as xfail rather than silently passing on a shrunk
+        # assertion.
+        must_survive=("Plan: Gold PPO 2026",),
     ),
     PhiRecallCase(
         label="pinned_certificate_see_page_survives",
@@ -351,5 +358,22 @@ SURVIVAL_GAP_REASONS: dict[str, str] = {
     "dosage_frequency_destroyed_by_date_time": (
         "DATE_TIME consumes the 'daily' dosage frequency. Same parked "
         "ruling as the policy date-range case."
+    ),
+    "pinned_member_id_prose_survives": (
+        "DATE_TIME consumes 'ten business days', leaving 'Your Member ID "
+        "cards are mailed within <DATE_TIME>.' Same parked ruling as the "
+        "policy date-range case; previously disclosed only via a narrowed "
+        "must_survive tuple and a comment, which a reader skimming green CI "
+        "would never see - restored to the full expected content and "
+        "surfaced here instead."
+    ),
+    "pinned_plan_gold_ppo_2026_survives": (
+        "DATE_TIME consumes '2026', leaving 'Plan: Gold PPO <DATE_TIME>' "
+        "(confirmed deterministic; 'Plan: Silver HMO 2026' survives "
+        "unchanged, so this is a token-sequence-specific spaCy quirk rather "
+        "than a blanket rule). Same parked ruling as the policy date-range "
+        "case; previously disclosed only via a narrowed must_survive tuple "
+        "and a comment - restored to the full expected content and surfaced "
+        "here instead."
     ),
 }
