@@ -718,8 +718,10 @@ TARA_SERVICE_NAME=tara-backend
 
 # ---- PHI redaction ----
 TARA_PHI_REDACTION_ENABLED=true
-# en_core_web_sm (12MB) keeps installs light; en_core_web_lg (600MB) has better recall.
-TARA_PHI_REDACTION_NLP_MODEL=en_core_web_sm
+# The spaCy model is pinned as a wheel dependency in pyproject.toml, not an
+# env knob - see Epic 0 M2. Do not add TARA_PHI_REDACTION_NLP_MODEL here: an
+# env var beats the config.py default, so a stale value would silently
+# re-introduce a model-recall gap that was measured and fixed in M2.
 ```
 
 - [ ] **Step 3: Bring the stack up**

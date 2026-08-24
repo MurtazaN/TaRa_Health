@@ -122,7 +122,7 @@
 | 4 | `TARA_OTLP_ENDPOINT` | `http://localhost:6006/v1/traces` | Epic 0 M3 |
 | 5 | `TARA_SERVICE_NAME` | `tara-backend` | Epic 0 M3 |
 | 6 | `TARA_PHI_REDACTION_ENABLED` | `true` | Epic 0 M2 |
-| 7 | `TARA_PHI_REDACTION_NLP_MODEL` | `en_core_web_sm` | Epic 0 M2 |
+| 7 | `TARA_PHI_REDACTION_NLP_MODEL` | `en_core_web_lg` | Epic 0 M2 |
 | 8 | `TARA_RERANK_ENABLED` | `false` until calibrated | Epic 1 M3 |
 | 9 | `TARA_RERANK_MODEL` | `BAAI/bge-reranker-v2-m3` | Epic 1 M3 |
 | 10 | `TARA_RERANK_CANDIDATE_MULTIPLIER` | `4` | Epic 1 M3 |

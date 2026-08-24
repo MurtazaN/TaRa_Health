@@ -28,6 +28,15 @@ dependencies = [
     # Local LLM runtime
     "ollama>=0.3",               # client for local models (Qwen3 / Llama / Gemma) via Ollama
     "openai>=1.0",               # OpenAI-compatible client: LM Studio (local) + hosted OpenAI-style endpoints
+
+    # PHI redaction before any span export or hosted egress
+    "presidio-analyzer>=2.2",
+    "presidio-anonymizer>=2.2",
+    # The spaCy model is a pinned wheel, not a `spacy download`, so the
+    # container, CI, and a local venv all get the SAME model version. A
+    # `download` resolves to whatever matches the installed spaCy, which would
+    # leave the recall tests pinned against a moving target.
+    "en_core_web_lg @ https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl",
 ]
 
 [project.optional-dependencies]
@@ -46,6 +55,13 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/tara"]
+
+[tool.hatch.metadata]
+# The en_core_web_lg dependency above is a direct URL (a pinned spaCy model
+# wheel, not a PyPI release) - hatchling refuses that in project.dependencies
+# unless this is set. Needed so the container, CI, and a local venv can all
+# resolve the exact same pinned model in one `pip install`.
+allow-direct-references = true
 
 [tool.pytest.ini_options]
 # Collect only this package's tests; keeps collection deterministic.

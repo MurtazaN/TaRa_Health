@@ -84,6 +84,18 @@ class Settings(BaseSettings):
     # ---- Timeouts ----
     llm_timeout_seconds: float = 60.0  # a stalled model can't hang a request forever (§3.5)
 
+    # ---- PHI redaction (README §6.2) ----
+    # On by default: this module exists so infrastructure can carry clinical
+    # content without carrying identity. A caller must never have to check it.
+    phi_redaction_enabled: bool = True
+    # en_core_web_lg (~427MB on disk) rather than the smaller models: measured
+    # 2026-08-15, en_core_web_sm returns ZERO entities for "Member: Priya
+    # Raghunathan" and leaks the given name in "MEMBER NAME: JAMAL WASHINGTON",
+    # while en_core_web_md still misses ALL-CAPS names. Both formats are
+    # standard in benefits documents, so the smaller models fail this module's
+    # only job. Size is noise next to the local model this app already runs.
+    phi_redaction_nlp_model: str = "en_core_web_lg"
+
     # ---- Upload limits (§3.1a) ----
     max_upload_bytes: int = _DEFAULT_MAX_UPLOAD_BYTES
     # Page ceiling for PDF parsing: bounds CPU/memory on a pathological (but small)
