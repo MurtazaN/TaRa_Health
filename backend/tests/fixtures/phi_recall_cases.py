@@ -12,6 +12,15 @@ both halves, not just the successes: `RECALL_GAP_REASONS` and
 the two contracts, and why. test_phi_redaction_recall.py reads those two maps
 to keep the gate honest - it reports the true corpus-wide recall including
 the gaps, and gates only on the cases that are not already known to fail.
+
+`must_remove` holds INDIVIDUAL name tokens, never a joined multi-word name.
+A joined check ("Okonkwo, Michael") passes as long as the substring is gone
+from the redacted text - including when only "Michael" was actually redacted
+and the surname "Okonkwo" leaked in full. Surname-only leakage is the exact
+failure that forced this module from en_core_web_sm to en_core_web_lg, so a
+gate that cannot see it is measuring the wrong thing. Every multi-token name
+below is split into its constituent tokens for that reason (found during the
+M2 final review, tracked as C1 in the fix report).
 """
 from __future__ import annotations
 
@@ -183,7 +192,10 @@ PHI_RECALL_CASES: tuple[PhiRecallCase, ...] = (
     PhiRecallCase(
         label="subscriber_and_dependent_same_line",
         text="Subscriber: Wei Chen   Dependent: Lily Chen (daughter)",
-        must_remove=("Wei Chen", "Lily Chen"),
+        # Split into individual name tokens (C1): a joined-substring check
+        # would pass even if only the given name were redacted and the
+        # shared surname "Chen" leaked from either mention.
+        must_remove=("Wei", "Chen", "Lily", "Chen"),
         must_survive=("(daughter)",),
     ),
     PhiRecallCase(
@@ -195,19 +207,23 @@ PHI_RECALL_CASES: tuple[PhiRecallCase, ...] = (
     PhiRecallCase(
         label="all_caps_name_in_header",
         text="MEMBER NAME: DEREK THOMPSON",
-        must_remove=("DEREK THOMPSON",),
+        # Split into individual name tokens (C1): see the module docstring
+        # note on why a joined-substring check is a blind spot.
+        must_remove=("DEREK", "THOMPSON"),
         must_survive=("MEMBER NAME",),
     ),
     PhiRecallCase(
         label="name_with_particle",
         text="Insured: Willem van der Berg, effective 01/01/2026",
-        must_remove=("Willem van der Berg",),
+        # Split into individual name tokens (C1).
+        must_remove=("Willem", "van", "der", "Berg"),
         must_survive=("Insured",),
     ),
     PhiRecallCase(
         label="prescription_label_prescriber_and_patient",
         text="Prescriber: Dr. Sandra Kowalski   Patient: Marcus Ellison   Rx: Lisinopril 10mg",
-        must_remove=("Sandra Kowalski", "Marcus Ellison"),
+        # Split into individual name tokens (C1).
+        must_remove=("Sandra", "Kowalski", "Marcus", "Ellison"),
         must_survive=("Lisinopril 10mg",),
     ),
     PhiRecallCase(
@@ -228,7 +244,11 @@ PHI_RECALL_CASES: tuple[PhiRecallCase, ...] = (
     PhiRecallCase(
         label="unlabelled_member_id_in_table_row",
         text="Okonkwo, Michael | W8842190113 | $412.00",
-        must_remove=("Okonkwo, Michael", "W8842190113"),
+        # Split into individual name tokens (C1) - this is the exact case
+        # that exposed the joined-substring blind spot: the old joined
+        # check ("Okonkwo, Michael") passed even though only "Michael" was
+        # redacted and "Okonkwo" leaked in full.
+        must_remove=("Okonkwo", "Michael", "W8842190113"),
         must_survive=("$412.00",),
     ),
     PhiRecallCase(
@@ -238,7 +258,14 @@ PHI_RECALL_CASES: tuple[PhiRecallCase, ...] = (
             "Claim Number: CL8837719945\n"
             "Authorization Number: AUTH99001122\n"
             "Rx Number: RX7788990011\n"
-            "Account Number: ACCT445566778"
+            "Account Number: ACCT445566778\n"
+            "MRN: 4482910\n"
+            "Medical Record Number: 4482910\n"
+            "Patient ID: P8842190\n"
+            "HICN: 123456789A\n"
+            "Enrollee ID: EN8842190\n"
+            "Cardholder ID: CH8842190\n"
+            "ID: W8842910113"
         ),
         must_remove=(
             "HX99887766",
@@ -246,6 +273,18 @@ PHI_RECALL_CASES: tuple[PhiRecallCase, ...] = (
             "AUTH99001122",
             "RX7788990011",
             "ACCT445566778",
+            # I4: the medical record number is the primary patient
+            # identifier in clinical documents and an explicit HIPAA Safe
+            # Harbor item; these seven labels are as uncovered as the five
+            # above but were absent from this case until the M2 final
+            # review (see RECALL_GAP_REASONS).
+            "4482910",
+            "4482910",
+            "P8842190",
+            "123456789A",
+            "EN8842190",
+            "CH8842190",
+            "W8842910113",
         ),
     ),
     PhiRecallCase(
@@ -257,13 +296,67 @@ PHI_RECALL_CASES: tuple[PhiRecallCase, ...] = (
     ),
     PhiRecallCase(
         label="hyphenated_surname_after_label_leaks",
-        text="Patient: Aisha Nwosu-Okafor",
-        must_remove=("Aisha Nwosu-Okafor",),
+        text=(
+            "Patient: Aisha Nwosu-Okafor\n"
+            "MEMBER NAME: AISHA NWOSU-OKAFOR\n"
+            "Member Name\n"
+            "JAMAL WASHINGTON"
+        ),
+        # "Aisha Nwosu-Okafor" is kept joined: the whole name leaks (both
+        # tokens), so splitting it would not change what the check reveals.
+        # The two additional identifiers (I3) are split per the C1
+        # convention, since each is a genuinely new multi-token name.
+        must_remove=("Aisha Nwosu-Okafor", "AISHA", "NWOSU-OKAFOR", "JAMAL", "WASHINGTON"),
     ),
     PhiRecallCase(
         label="address_block_partial_leak",
         text="123 Maple Street, Apt 4B\nSpringfield, IL 62704",
         must_remove=("123 Maple Street", "62704"),
+    ),
+    PhiRecallCase(
+        label="spaced_identifier_after_covered_label_leaks",
+        # C2: the label IS covered by the alternation in each line below -
+        # this is not an "uncovered label" gap. The value class is
+        # [A-Za-z0-9-], so when the run right after the label carries no
+        # digit ("XQZ", "ABC", "55", "884"), the digit lookahead fails at
+        # the value's start and the whole match aborts before the
+        # digit-bearing group later in the string is ever evaluated.
+        text=(
+            "Member ID: XQZ 884 2190\n"
+            "Subscriber ID: ABC 123456\n"
+            "Group: 55 210\n"
+            "Policy No: 884/2190/11\n"
+            "Member ID: 884.2190.11"
+        ),
+        must_remove=(
+            "XQZ 884 2190",
+            "ABC 123456",
+            "55 210",
+            "884/2190/11",
+            "884.2190.11",
+        ),
+    ),
+    PhiRecallCase(
+        label="short_identifier_after_covered_label_leaks",
+        # I1: direct cost of the round-3 length floor (_ID_VALUE requires a
+        # first character plus at least four more, i.e. length >= 5) that
+        # exists to exclude bare 4-digit years. Four-digit group numbers and
+        # short plan/member IDs are real and are not years.
+        text=(
+            "Group: 5521\n"
+            "Group #: 0842\n"
+            "Member ID: 1234\n"
+            "Plan ID: A123"
+        ),
+        must_remove=("5521", "0842", "1234", "A123"),
+    ),
+    PhiRecallCase(
+        label="ip_address_in_access_log_line_is_removed",
+        # I2: IP_ADDRESS is a HIPAA Safe Harbor identifier (O),
+        # 45 CFR 164.514(b)(2)(i)(O), and M3 is a tracing plane where
+        # client and host addresses are exactly what span attributes carry.
+        text="Portal accessed from 10.1.2.3\nsource_ip=172.16.4.9",
+        must_remove=("10.1.2.3", "172.16.4.9"),
     ),
     # --- Known gaps: DATE_TIME over-redaction (expected to FAIL) ---
     # Parked with a ruling: this is a precision problem, not a recall
@@ -294,6 +387,27 @@ PHI_RECALL_CASES: tuple[PhiRecallCase, ...] = (
         must_remove=(),
         must_survive=("twice daily",),
     ),
+    # --- Known gap: plan-name destruction, mis-attributable to DATE_TIME ---
+    PhiRecallCase(
+        label="plan_name_destroyed_by_custom_id_regex",
+        # I7: firing recognizer is INSURANCE_MEMBER_ID, NOT DATE_TIME. Do
+        # not change the regex - see RECALL_GAP_REASONS / SURVIVAL_GAP_REASONS
+        # and the M2 final-fix brief: this is a precision defect in the
+        # exclusion-based value class, not a DATE_TIME interaction, and a
+        # fourth regex-correction round is exactly the failure mode being
+        # avoided.
+        text=(
+            "Plan: HDHP3000 deductible is $3,000\n"
+            "Plan: PPO2500 network only\n"
+            "Policy: FY2024-2025 renewal notice"
+        ),
+        must_remove=(),
+        must_survive=(
+            "Plan: HDHP3000 deductible is $3,000",
+            "Plan: PPO2500 network only",
+            "Policy: FY2024-2025 renewal notice",
+        ),
+    ),
 )
 
 # Cases in PHI_RECALL_CASES whose must_remove assertion is known, today, to
@@ -307,15 +421,25 @@ RECALL_GAP_REASONS: dict[str, str] = {
         "deliberately excluded because its pattern also matches ICD-10 codes."
     ),
     "unlabelled_member_id_in_table_row": (
-        "Same root cause as the bare-identifier case: the ID has no "
-        "preceding label token inside the table cell."
+        "The ID has no preceding label token inside the table cell, same "
+        "root cause as the bare-identifier case. Separately, and newly "
+        "visible now that must_remove checks individual name tokens (see "
+        "the module docstring): spaCy tags only the given name in a "
+        "'Surname, GivenName' table-cell fragment, so 'Okonkwo' leaks "
+        "while 'Michael' is correctly redacted - a second, independent "
+        "leak in this one case."
     ),
     "uncovered_label_formats_leak": (
-        "Reference #, Claim Number, Authorization Number, Rx Number, and "
-        "Account Number are not in either custom recognizer's label "
-        "alternation (Member/Subscriber/Insured/Policy/Certificate/Plan/"
-        "MBI/Medicare for the member recognizer, Group for the group "
-        "recognizer), so their values are never evaluated as candidates."
+        "Reference #, Claim Number, Authorization Number, Rx Number, "
+        "Account Number, MRN, Medical Record Number, Patient ID, HICN, "
+        "Enrollee ID, Cardholder ID, and bare ID are not in either custom "
+        "recognizer's label alternation (Member/Subscriber/Insured/Policy/"
+        "Certificate/Plan/MBI/Medicare for the member recognizer, Group "
+        "for the group recognizer), so their values are never evaluated as "
+        "candidates. The medical record number (MRN) is the primary "
+        "patient identifier in clinical documents and an explicit HIPAA "
+        "Safe Harbor item (I4); it was added to this case during the M2 "
+        "final review alongside its close peers."
     ),
     "ocr_noised_member_id_leaks": (
         "OCR noise (Cyrillic 'г' for Latin 'r', letter O for zero) breaks "
@@ -323,17 +447,52 @@ RECALL_GAP_REASONS: dict[str, str] = {
         "fires against the garbled label token."
     ),
     "hyphenated_surname_after_label_leaks": (
-        "Newly discovered during this measurement, not on the M2 audit's "
-        "original gap list: spaCy's PERSON recognizer fails to tag a "
-        "hyphenated surname when it directly follows a colon-terminated "
-        "label ('Patient:'). The identical name is tagged correctly in "
-        "prose ('Patient Aisha Nwosu-Okafor was seen...') and standalone."
+        "NOT a hyphen-after-colon-label shape defect - that generalization "
+        "was measured and found false: five other hyphenated surnames "
+        "directly after a colon-terminated label redact correctly ('Attn: "
+        "Deshawn Jefferson-Brooks', 'Spouse: Ellen McAllister-Reyes', "
+        "'Beneficiary: Fatima Al-Rashid', 'MEMBER: GARCIA-LOPEZ, MARIA', "
+        "'Insured: Jean-Luc Moreau'). The real cause: statistical "
+        "named-entity recognition is unreliable per-NAME on "
+        "out-of-vocabulary tokens in low-context lines - an unbounded, "
+        "unenumerable failure mode, confirmed here by two further named "
+        "leaks that share no shape with the original ('AISHA NWOSU-OKAFOR' "
+        "leaks entirely in an ALL-CAPS header; 'JAMAL' leaks on its own "
+        "line while 'WASHINGTON' is coincidentally caught, but only "
+        "because it is mistagged LOCATION, not PERSON). PERSON recall is "
+        "NAME-dependent, not SHAPE-dependent: no fixture, however large, "
+        "bounds it, so this gap must not be read as 'hyphenated surnames "
+        "after a label' - that scope is too narrow for what is actually "
+        "unbounded."
     ),
     "address_block_partial_leak": (
         "Newly discovered during this measurement, not on the M2 audit's "
         "original gap list: Presidio's LOCATION recognizer tags only the "
         "city token ('Springfield'); the street address and ZIP code are "
         "left untouched."
+    ),
+    "spaced_identifier_after_covered_label_leaks": (
+        "C2: the label IS covered by the custom recognizer's alternation - "
+        "do not read this as a 'label not covered' gap like the ones "
+        "above. The value class is [A-Za-z0-9-], so when the token run "
+        "immediately after the label carries no digit ('XQZ', 'ABC', '55', "
+        "'884'), the digit lookahead (_HAS_A_DIGIT) fails at the very "
+        "start of the value and the whole match aborts - the digit-bearing "
+        "group later in the same string (e.g. '2190' after 'XQZ 884') is "
+        "never reached or evaluated as a candidate. Not fixed here: the "
+        "regexes are out of scope for this review (see the M2 final-fix "
+        "brief)."
+    ),
+    "short_identifier_after_covered_label_leaks": (
+        "I1: direct cost of the round-3 length floor. _ID_VALUE requires "
+        "a first character plus at least four more (effectively length "
+        ">= 5), specifically to exclude a bare 4-digit year. Four-digit "
+        "group numbers ('5521', '0842') and short member/plan IDs "
+        "('1234', 'A123') are real identifiers, not years, and this floor "
+        "excludes them too. Do NOT lower the floor to fix this - rounds 1 "
+        "through 3 already show that chasing one shape with the regex "
+        "reliably breaks another; the floor's tradeoff is accepted and "
+        "documented here instead."
     ),
 }
 
@@ -375,5 +534,21 @@ SURVIVAL_GAP_REASONS: dict[str, str] = {
         "case; previously disclosed only via a narrowed must_survive tuple "
         "and a comment - restored to the full expected content and surfaced "
         "here instead."
+    ),
+    "plan_name_destroyed_by_custom_id_regex": (
+        "I7: the firing recognizer is INSURANCE_MEMBER_ID, NOT DATE_TIME - "
+        "do not attribute this to the DATE_TIME interaction documented "
+        "above, that is a real but separate finding. _NOT_A_YEAR is "
+        "anchored at the value's start, so any prefix defeats it: "
+        "'HDHP3000' and 'PPO2500' carry a digit run that is not itself a "
+        "bare year, and 'FY2024-2025' passes the guard that a bare "
+        "'2024-2025' fails, because the guard only inspects the first four "
+        "characters after the label. Plan-name tokens are exactly the "
+        "field an M4 coverage question needs, and the label is consumed "
+        "along with them. Not fixed here: the regexes are out of scope for "
+        "this review (see the M2 final-fix brief) - this is a precision "
+        "problem in the exclusion-based design, not a recall problem, and "
+        "a fourth regex-correction round is exactly the failure mode being "
+        "avoided."
     ),
 }

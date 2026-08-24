@@ -1,9 +1,11 @@
 """PHI redaction is what makes tracing safe on a health corpus - test it hard."""
 from __future__ import annotations
 
+import warnings
+
 import pytest
 
-from tara import config
+from tara import config, phi_redaction
 from tara.phi_redaction import redact_phi
 
 
@@ -289,3 +291,46 @@ def test_disabled_redaction_passes_text_through(monkeypatch):
 
 def test_empty_text_is_returned_unchanged(redaction_on):
     assert redact_phi("") == ""
+
+
+@pytest.mark.integration
+def test_narrowed_entities_redacts_only_what_it_names(redaction_on):
+    """I5: `entities` lets a caller narrow the set for its own context (e.g.
+    the hosted-egress path keeping DATE_TIME) without editing the module
+    constant, which would silently weaken every other consumer too."""
+    text = "Member: John Smith, Group: 55210"
+    default = redact_phi(text)
+    assert "<PERSON>" in default
+    assert "<INSURANCE_GROUP_ID>" in default
+
+    narrowed = redact_phi(text, entities=["PERSON"])
+    assert "<PERSON>" in narrowed
+    assert "John Smith" not in narrowed
+    # Not in the narrowed set, so it must survive verbatim - narrowing must
+    # not fall back to the full default set.
+    assert "Group: 55210" in narrowed
+    assert "<INSURANCE_GROUP_ID>" not in narrowed
+
+
+@pytest.mark.integration
+def test_disabled_redaction_warns_once_not_per_call(monkeypatch):
+    """I6: the module's own Global Constraint says redaction must never be
+    silently disabled. `phi_redaction_enabled=false` must emit a warning -
+    exactly once per process, not once per call, so a hot loop does not
+    flood stderr while making the same point every time."""
+    monkeypatch.setattr(phi_redaction, "_disabled_warning_emitted", False)
+    monkeypatch.setenv("TARA_PHI_REDACTION_ENABLED", "false")
+    config.get_settings.cache_clear()
+    try:
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            for _ in range(5):
+                redact_phi("Patient Michael Okonkwo, member ID XQZ8842190.")
+        disabled_warnings = [w for w in caught if issubclass(w.category, UserWarning)]
+        assert len(disabled_warnings) == 1, (
+            f"expected exactly one warning across 5 calls, got "
+            f"{len(disabled_warnings)}: {[str(w.message) for w in disabled_warnings]}"
+        )
+        assert "disabled" in str(disabled_warnings[0].message).lower()
+    finally:
+        config.get_settings.cache_clear()

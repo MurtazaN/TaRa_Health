@@ -18,7 +18,6 @@ from __future__ import annotations
 import pytest
 
 from tara import config
-from tara import phi_redaction
 from tara.phi_redaction import redact_phi
 from tests.fixtures.phi_recall_cases import (
     PHI_RECALL_CASES,
@@ -33,31 +32,53 @@ from tests.fixtures.phi_recall_cases import (
 # test_aggregate_recall_meets_the_gate for the true, ungated number.
 REQUIRED_RECALL = 1.0
 
-# Freezing these counts is what stops the gate being passed dishonestly. A
-# genuine failure could otherwise be moved into a gap list with a plausible
-# reason string, shrinking the gated denominator until CI went green without
-# redaction improving at all. Raising either number is a deliberate act that
-# has to be justified in review.
-EXPECTED_RECALL_GAP_COUNT = 6
-EXPECTED_SURVIVAL_GAP_COUNT = 6
+# Freezing these LABEL SETS (not counts) is what stops the gate being passed
+# dishonestly. A count-only freeze lets a genuine failure be swapped for a
+# gap that was actually fixed - removing the fixed one and adding the new one
+# keeps len() unchanged, so the guard passes silently while nothing is safer.
+# Freezing identity closes that: swapping any single label, in either
+# direction, changes the set and fails loudly, naming exactly what was added
+# and what was removed. Raising the set is a deliberate act that has to be
+# justified in review.
+EXPECTED_RECALL_GAP_LABELS = frozenset({
+    "unlabelled_member_id_alone_on_line",
+    "unlabelled_member_id_in_table_row",
+    "uncovered_label_formats_leak",
+    "ocr_noised_member_id_leaks",
+    "hyphenated_surname_after_label_leaks",
+    "address_block_partial_leak",
+    "spaced_identifier_after_covered_label_leaks",
+    "short_identifier_after_covered_label_leaks",
+})
+EXPECTED_SURVIVAL_GAP_LABELS = frozenset({
+    "policy_date_range_destroyed_by_date_time",
+    "group_duration_destroyed_by_date_time",
+    "blood_pressure_destroyed_by_date_time",
+    "dosage_frequency_destroyed_by_date_time",
+    "pinned_member_id_prose_survives",
+    "pinned_plan_gold_ppo_2026_survives",
+    "plan_name_destroyed_by_custom_id_regex",
+})
 
 
 @pytest.fixture(autouse=True)
 def redaction_on(monkeypatch):
-    """Force redaction on and rebuild every cache it could be reading from.
+    """Force redaction on for every case in this module.
 
-    `_analyzer_engine` and `get_settings` are both `lru_cache`d. No fixture
-    case here changes `TARA_PHI_REDACTION_NLP_MODEL`, but clearing the
-    analyzer cache alongside the settings cache is what makes that true by
-    construction rather than by accident - a future case that does change it
-    would otherwise silently measure the wrong engine.
+    Only `get_settings` is cleared here, not `_analyzer_engine`. The engine
+    cache holds a ~427MB spaCy model; clearing it forces a ~0.9s rebuild on
+    the NEXT call, and this fixture ran on every single test in this module
+    (~80 of them), which is where most of the suite's wall-clock went for no
+    correctness benefit - no case in this module changes
+    `TARA_PHI_REDACTION_NLP_MODEL`, so the engine this fixture was rebuilding
+    was never stale to begin with. The engine cache must still be cleared by
+    any fixture that DOES change the model setting - clear it there, not
+    here.
     """
     monkeypatch.setenv("TARA_PHI_REDACTION_ENABLED", "true")
     config.get_settings.cache_clear()
-    phi_redaction._analyzer_engine.cache_clear()
     yield
     config.get_settings.cache_clear()
-    phi_redaction._analyzer_engine.cache_clear()
 
 
 def _parametrize_cases(gap_reasons: dict[str, str]) -> list:
@@ -136,14 +157,34 @@ def test_aggregate_recall_meets_the_gate(capsys):
 
 
 def test_gap_lists_are_frozen():
-    """A new gap must be an explicit, visible decision - never a quiet edit."""
-    assert len(RECALL_GAP_REASONS) == EXPECTED_RECALL_GAP_COUNT, (
-        "Recall-gap count changed. If you are adding a gap, raise "
-        "EXPECTED_RECALL_GAP_COUNT deliberately and say why in the reason "
-        "string. If you FIXED one, lower it - and thank you."
+    """A new gap must be an explicit, visible decision - never a quiet edit.
+
+    Freezes on LABEL IDENTITY, not len(). A count-only freeze lets a real
+    regression swap places with a gap that was actually fixed - remove the
+    fixed label, add the new one, and len() never moves, so the guard would
+    pass silently while nothing got safer. Comparing sets instead means any
+    single substitution changes both EXPECTED_*_GAP_LABELS - EXPECTED (added)
+    and EXPECTED_*_GAP_LABELS - actual (removed), and the failure message
+    names both, so a swap cannot hide behind an unchanged count.
+    """
+    actual_recall_labels = frozenset(RECALL_GAP_REASONS)
+    added_recall = sorted(actual_recall_labels - EXPECTED_RECALL_GAP_LABELS)
+    removed_recall = sorted(EXPECTED_RECALL_GAP_LABELS - actual_recall_labels)
+    assert not added_recall and not removed_recall, (
+        "Recall-gap labels changed - "
+        f"added: {added_recall}, removed: {removed_recall}. "
+        "If you are adding a gap, update EXPECTED_RECALL_GAP_LABELS "
+        "deliberately and say why in the reason string. If you FIXED one, "
+        "remove its label from EXPECTED_RECALL_GAP_LABELS - and thank you."
     )
-    assert len(SURVIVAL_GAP_REASONS) == EXPECTED_SURVIVAL_GAP_COUNT, (
-        "Survival-gap count changed. Same rule as above."
+
+    actual_survival_labels = frozenset(SURVIVAL_GAP_REASONS)
+    added_survival = sorted(actual_survival_labels - EXPECTED_SURVIVAL_GAP_LABELS)
+    removed_survival = sorted(EXPECTED_SURVIVAL_GAP_LABELS - actual_survival_labels)
+    assert not added_survival and not removed_survival, (
+        "Survival-gap labels changed - "
+        f"added: {added_survival}, removed: {removed_survival}. "
+        "Same rule as above."
     )
 
 

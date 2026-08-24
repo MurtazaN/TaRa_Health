@@ -7,6 +7,8 @@ to show, while dropping the identity that makes it protected health information.
 from __future__ import annotations
 
 import re
+import warnings
+from collections.abc import Sequence
 from functools import lru_cache
 
 from presidio_analyzer import AnalyzerEngine, Pattern, PatternRecognizer
@@ -41,6 +43,13 @@ REDACTED_ENTITIES = [
     "IBAN_CODE",
     # EOB portal links routinely embed a member token in the query string.
     "URL",
+    # HIPAA Safe Harbor identifier (O), 45 CFR 164.514(b)(2)(i)(O). Added
+    # for M3: execution_tracing spans carry client and host addresses, and
+    # those are exactly what this entity catches. Verified (M2 final
+    # review) against every fixture text plus the clinical shapes it could
+    # plausibly collide with (ICD-10 codes, an NDC, a section number, a
+    # blood-pressure reading, a version string): zero false positives.
+    "IP_ADDRESS",
     INSURANCE_MEMBER_ID_ENTITY,
     INSURANCE_GROUP_ID_ENTITY,
     # Deliberately excluded: ORGANIZATION. It fires on ordinary clinical nouns
@@ -129,19 +138,48 @@ def _anonymizer_engine() -> AnonymizerEngine:
     return AnonymizerEngine()
 
 
-def redact_phi(text: str) -> str:
+# Set the first time redact_phi() runs while phi_redaction_enabled is false,
+# so the one-time warning below fires once per process rather than once per
+# call. Never reset in production; tests that need a fresh warning reset it
+# via monkeypatch.
+_disabled_warning_emitted = False
+
+
+def redact_phi(text: str, entities: Sequence[str] | None = None) -> str:
     """Return `text` with PHI entities replaced by `<ENTITY_TYPE>` placeholders.
 
+    `entities` defaults to `REDACTED_ENTITIES`. It exists so a caller can narrow
+    the set for its own context: an on-device trace can afford aggressive
+    redaction, while the hosted-egress path needs to keep plan years and
+    waiting periods that `DATE_TIME` would otherwise strip. Narrowing at the
+    call site rather than by editing the constant keeps one consumer's choice
+    from silently weakening the other's.
+
     A no-op when `phi_redaction_enabled` is false or the text is empty, so the
-    caller never has to branch. Raises on a non-string input rather than
-    silently passing it through, so the `-> str` contract always holds.
+    caller never has to branch - but the disabled case is never SILENT: the
+    first call made while disabled emits a one-time `warnings.warn`, because
+    this module's Global Constraint is that redaction must never be silently
+    disabled. Raises on a non-string input rather than silently passing it
+    through, so the `-> str` contract always holds.
     """
     if not isinstance(text, str):
         raise TypeError(f"redact_phi expects str, got {type(text).__name__}")
-    if not text or not get_settings().phi_redaction_enabled:
+    if not text:
+        return text
+    if not get_settings().phi_redaction_enabled:
+        global _disabled_warning_emitted
+        if not _disabled_warning_emitted:
+            warnings.warn(
+                "PHI redaction is disabled (phi_redaction_enabled=false); "
+                "text is passing through unredacted.",
+                stacklevel=2,
+            )
+            _disabled_warning_emitted = True
         return text
     analyzer_results = _analyzer_engine().analyze(
-        text=text, language="en", entities=REDACTED_ENTITIES,
+        text=text,
+        language="en",
+        entities=list(entities) if entities else REDACTED_ENTITIES,
     )
     if not analyzer_results:
         return text
