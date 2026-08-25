@@ -14,6 +14,7 @@
 2. [M2 — phi_redaction](M2_phi_redaction.md) — strip protected health information out of any text before it leaves the process, and prove the recall with a fixture.
 3. [M3 — execution_tracing](M3_execution_tracing.md) — make a request's internal execution visible as a trace, with every string attribute redacted before it enters a span.
 4. [M4 — epic1_handoff](M4_epic1_handoff.md) — the per-module deltas these decisions impose on Epic 1 M3–M8. A planning boundary, not a task list.
+5. [M5 — model_backends](M5_model_backends.md) — two real model backends: hosted generation on Google Cloud Agent Platform, and embeddings running in-process. Removes the LM Studio dependency without sending documents anywhere to be indexed. Added 2026-08-25, after M4; independent of M3.
 
 - **M2 and M3 were one module until 2026-08-15.** They were split because `phi_redaction.py` is a *kernel* module while `execution_tracing/` is a *plane* that depends on it — bundling a kernel module with its own consumer inverts the layering enforced everywhere else. Redaction also has a second consumer independent of tracing (the Epic 1 M4 hosted-egress path), and as the security-critical half it earns its own review gate.
 
@@ -164,12 +165,14 @@
 | # | Module | Changes behaviour? | Gate |
 |---|---|---|---|
 | 1 | [M1 — repo_restructure](M1_repo_restructure.md) | No | **DONE 2026-08-15** — suite held at 67 passed / 3 skipped; `make up` then `curl http://127.0.0.1:8000/` returns `200` |
-| 2 | [M2 — phi_redaction](M2_phi_redaction.md) | No | Recall gate passes at 100% on the fixture, and clinical/cost content survives |
+| 2 | [M2 — phi_redaction](M2_phi_redaction.md) | No | **DONE 2026-08-24** — gated recall 31/31; **true recall 33/64 = 51.6%** with 15 documented `xfail` gaps. The gated figure is a regression guard, not a measure of protection |
 | 3 | [M3 — execution_tracing](M3_execution_tracing.md) | No | An `/upload` call produces a span tree at `localhost:6006` with no name or member identifier in any attribute |
 | 4 | [M4 — epic1_handoff](M4_epic1_handoff.md) | n/a — a planning boundary | Epic 1 resumes at its own M4 |
+| 5 | [M5 — model_backends](M5_model_backends.md) | **Yes** — replaces the model layer | With the image already built, a full upload-and-ask cycle succeeds with the container's networking disabled; `Settings()` fails closed on an empty project or unacknowledged egress **when generation egresses** |
 
 - **Ordering is load-bearing.** M1 must land before any Epic 1 M4 code, or M4's files get moved twice.
 - **M1 and M2 are behaviour-neutral by design.** Every functional change lives in Epic 1.
+- **M5 is the exception to that rule**, and deliberately so: it replaces the model layer. Ingestion and retrieval stay fully on-device; only Agent Platform *generation* egresses, and only when opted into — which requires a signed GCP BAA that no code can enforce.
 
 ## Global constraints
 
