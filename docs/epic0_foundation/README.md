@@ -95,7 +95,7 @@
 ### 6.2 Egress flow
 
 - Every span attribute passes through `phi_redaction` before it reaches a span.
-- When `model_mode` is `hosted`/`hybrid`, the assembled context passes through `phi_redaction` before leaving the device.
+- When `generation_mode` is `agent_platform`/`hybrid`, the assembled context passes through `phi_redaction` before leaving the device (Epic 0 M5).
 
 ### 6.3 Abstention rule
 
@@ -129,6 +129,16 @@
 | 10 | `TARA_RERANK_CANDIDATE_MULTIPLIER` | `4` | Epic 1 M3 |
 | 11 | `TARA_RERANK_ABSTAIN_THRESHOLD` | Unset until calibrated | Epic 1 M3 |
 | 12 | `TARA_HAZARD_CLASSIFIER_MODEL` | Empty; keyword-only | Epic 1 M5 |
+| 13 | `TARA_GENERATION_MODE` | `local` | Epic 0 M5 |
+| 14 | `TARA_GCP_PROJECT` | `""` (empty) | Epic 0 M5 |
+| 15 | `TARA_GCP_LOCATION` | `us-central1` | Epic 0 M5 |
+| 16 | `TARA_AGENT_PLATFORM_PROVIDER` | `gemini` | Epic 0 M5 |
+| 17 | `TARA_PHI_EGRESS_ACKNOWLEDGED` | `false` | Epic 0 M5 |
+| 18 | `TARA_EMBED_MODEL_REVISION` | `97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3` | Epic 0 M5 |
+| 19 | `TARA_CHUNK_TARGET_TOKENS` | `800` | Epic 0 M5 |
+| 20 | `TARA_CHUNK_OVERLAP_TOKENS` | `100` | Epic 0 M5 |
+
+- `TARA_HOSTED_MODEL` and `TARA_HOSTED_API_KEY`, planned in an earlier draft of this table, were never implemented and do not exist — M5 replaced that draft with the Agent Platform + in-process-embedding split above (see [M5 §5.1–5.3](M5_model_backends.md#5-configuration-surface)).
 
 ## 8. Containers and CI
 
@@ -168,7 +178,7 @@
 | 2 | [M2 — phi_redaction](M2_phi_redaction.md) | No | **DONE 2026-08-24** — gated recall 31/31; **true recall 33/64 = 51.6%** with 15 documented `xfail` gaps. The gated figure is a regression guard, not a measure of protection |
 | 3 | [M3 — execution_tracing](M3_execution_tracing.md) | No | An `/upload` call produces a span tree at `localhost:6006` with no name or member identifier in any attribute |
 | 4 | [M4 — epic1_handoff](M4_epic1_handoff.md) | n/a — a planning boundary | Epic 1 resumes at its own M4 |
-| 5 | [M5 — model_backends](M5_model_backends.md) | **Yes** — replaces the model layer | With the image already built, a full upload-and-ask cycle succeeds with the container's networking disabled; `Settings()` fails closed on an empty project or unacknowledged egress **when generation egresses** |
+| 5 | [M5 — model_backends](M5_model_backends.md) | **Yes** — replaces the model layer | **DONE 2026-08-25** — suite holds at 192 passed / 4 skipped / 15 xfailed; `make lint`/`make typecheck` clean; `Settings()` fails closed on an empty project or unacknowledged egress when generation egresses. **The container offline-embedding guarantee (spec §10 assertion 12) is NOT VERIFIED** — Docker was unavailable in the implementing environment, so `make up` followed by `docker compose -f deployment/docker/compose.yaml run --rm --network none tara-backend python -c "..."` (plan Task 6 Step 5) has never been run. A human must run it, record `max_seq_length` and `dim`, and only then treat the container path as proven |
 
 - **Ordering is load-bearing.** M1 must land before any Epic 1 M4 code, or M4's files get moved twice.
 - **M1 and M2 are behaviour-neutral by design.** Every functional change lives in Epic 1.
@@ -264,7 +274,7 @@
 
 1. `rerank_abstain_threshold` has no value until Epic 1 M8 calibration.
 2. The custom Llama Guard emergency taxonomy text is undrafted; it lands with Epic 1 M5.
-3. Whether `hosted_client.py` targets Anthropic or another provider is still unsettled (`hosted_api_key` is deliberately provider-agnostic).
+3. ~~Whether `hosted_client.py` targets Anthropic or another provider is still unsettled (`hosted_api_key` is deliberately provider-agnostic).~~ Settled by Epic 0 M5: generation runs on Google Cloud Agent Platform via `AgentPlatformClient`, selectable between Gemini/Llama/Mistral by `agent_platform_provider`; there is no `hosted_client.py` and no API key — Agent Platform authenticates via Application Default Credentials.
 4. **Out-of-band, not a code task:** rotate the `HUGGINGFACEHUB_API_KEY` and `NVIDIA_API_KEY` values in the local `.env`. The file is gitignored and has never been committed, so nothing leaked to version control, but both values appeared in a session transcript.
 
 ## 15. Verification commands

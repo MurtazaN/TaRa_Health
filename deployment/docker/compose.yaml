@@ -17,8 +17,13 @@ services:
       TARA_DATA_DIR: "/data"
       TARA_FRONTEND_DIR: "/app/frontend"
       TARA_SERVER_HOST: "0.0.0.0"
+      # Agent Platform generation only. Unused in TARA_GENERATION_MODE=local.
+      GOOGLE_APPLICATION_CREDENTIALS: /gcp/adc.json
     volumes:
       - tara-data:/data
+      # Read-only, and never COPYd into an image layer: a credential baked into a
+      # layer is permanent and shippable.
+      - ~/.config/gcloud/application_default_credentials.json:/gcp/adc.json:ro
     extra_hosts:
       # Docker Desktop supplies this on macOS; the mapping is needed on Linux.
       - "host.docker.internal:host-gateway"

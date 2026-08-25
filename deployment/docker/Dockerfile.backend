@@ -20,6 +20,18 @@ COPY backend/pyproject.toml /app/backend/pyproject.toml
 COPY backend/src/tara/__init__.py /app/backend/src/tara/__init__.py
 RUN uv pip install --system -e "/app/backend"
 
+# Bake the pinned embedding model into the image so the container never reaches
+# Hugging Face at runtime and works with networking disabled. Pinned by revision
+# for the same reason the spaCy model is a pinned wheel: an unpinned model would
+# silently change the vector space between builds.
+ENV HF_HOME=/opt/hf \
+    SENTENCE_TRANSFORMERS_HOME=/opt/hf \
+    HF_HUB_OFFLINE=0
+RUN python -c "\
+from sentence_transformers import SentenceTransformer; \
+SentenceTransformer('Qwen/Qwen3-Embedding-0.6B', \
+                    revision='97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3')"
+
 COPY backend/ /app/backend/
 COPY frontend/ /app/frontend/
 
@@ -28,6 +40,10 @@ COPY frontend/ /app/frontend/
 # is /app) - these pin the paths explicitly rather than lean on that layout.
 ENV TARA_FRONTEND_DIR=/app/frontend \
     TARA_DATA_DIR=/data
+
+# Offline at runtime: the weights are already in the image, so a hub lookup would
+# only be a silent network dependency.
+ENV HF_HUB_OFFLINE=1
 
 RUN mkdir -p /data && chmod 700 /data
 VOLUME ["/data"]
