@@ -137,6 +137,11 @@
 | 18 | `TARA_EMBED_MODEL_REVISION` | `97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3` | Epic 0 M5 |
 | 19 | `TARA_CHUNK_TARGET_TOKENS` | `800` | Epic 0 M5 |
 | 20 | `TARA_CHUNK_OVERLAP_TOKENS` | `100` | Epic 0 M5 |
+| 21 | `TARA_GEMINI_MODEL` | `gemini-3.5-flash` | Epic 0 M5 |
+| 22 | `TARA_LLAMA_MODEL` | `meta/llama-3.3-70b-instruct-maas` | Epic 0 M5 |
+| 23 | `TARA_MISTRAL_MODEL` | `mistral-medium-3` | Epic 0 M5 |
+| 24 | `TARA_EMBED_MODEL` | `Qwen/Qwen3-Embedding-0.6B` | Epic 0 M5 |
+| 25 | `TARA_EMBED_MODEL_OFFLINE_ONLY` | `false` | Epic 0 M5 |
 
 - `TARA_HOSTED_MODEL` and `TARA_HOSTED_API_KEY`, planned in an earlier draft of this table, were never implemented and do not exist — M5 replaced that draft with the Agent Platform + in-process-embedding split above (see [M5 §5.1–5.3](M5_model_backends.md#5-configuration-surface)).
 
@@ -178,11 +183,35 @@
 | 2 | [M2 — phi_redaction](M2_phi_redaction.md) | No | **DONE 2026-08-24** — gated recall 31/31; **true recall 33/64 = 51.6%** with 15 documented `xfail` gaps. The gated figure is a regression guard, not a measure of protection |
 | 3 | [M3 — execution_tracing](M3_execution_tracing.md) | No | An `/upload` call produces a span tree at `localhost:6006` with no name or member identifier in any attribute |
 | 4 | [M4 — epic1_handoff](M4_epic1_handoff.md) | n/a — a planning boundary | Epic 1 resumes at its own M4 |
-| 5 | [M5 — model_backends](M5_model_backends.md) | **Yes** — replaces the model layer | **DONE 2026-08-25** — suite holds at 192 passed / 4 skipped / 15 xfailed; `make lint`/`make typecheck` clean; `Settings()` fails closed on an empty project or unacknowledged egress when generation egresses. **The container offline-embedding guarantee (spec §10 assertion 12) is NOT VERIFIED** — Docker was unavailable in the implementing environment, so `make up` followed by `docker compose -f deployment/docker/compose.yaml run --rm --network none tara-backend python -c "..."` (plan Task 6 Step 5) has never been run. A human must run it, record `max_seq_length` and `dim`, and only then treat the container path as proven |
+| 5 | [M5 — model_backends](M5_model_backends.md) | **Yes** — replaces the model layer | **DONE 2026-08-25** — suite holds at 213 passed / 4 skipped / 16 xfailed; `make lint`/`make typecheck` clean. **Two gaps remain open, listed in §9.1 below.** Read that before treating spec §10 as met |
 
 - **Ordering is load-bearing.** M1 must land before any Epic 1 M4 code, or M4's files get moved twice.
 - **M1 and M2 are behaviour-neutral by design.** Every functional change lives in Epic 1.
 - **M5 is the exception to that rule**, and deliberately so: it replaces the model layer. Ingestion and retrieval stay fully on-device; only Agent Platform *generation* egresses, and only when opted into — which requires a signed GCP BAA that no code can enforce.
+
+### 9.1 M5 acceptance — what is actually pinned
+
+- Spec [§10](M5_model_backends.md#10-acceptance) asks for "all 12 assertions in §9.3 present and passing". Eleven are; one is not, and the container check has never been run. Recorded here rather than implied by a green suite.
+
+| §9.3 | Pinned behaviour | State |
+|---|---|---|
+| 1 | `embed_query` passes `prompt_name="query"`; `embed_texts` does not | **Passing** — `test_embed_query_applies_the_query_prompt`, `test_embed_texts_applies_no_prompt` |
+| 2 | `SentenceTransformer` constructed with the pinned `revision` | **Passing** — `test_model_is_constructed_with_the_pinned_revision`, which builds the real constructor against a recorder |
+| 3 | Vectors are unit length | **Passing** |
+| 4 | Count mismatch raises | **Passing** |
+| 5 | `vertexai=True` on every LangChain construction; empty `gcp_project` raises when generation egresses | **Passing as of the final fix wave.** It was previously HALF-PRESENT: every client test patched `_chat_model` wholesale, so the constructor never ran and deleting the `vertexai=True` line would have shipped green. `test_gemini_model_is_constructed_with_vertexai_pinned` now exercises the real constructor. MaaS is exempt by construction — those classes expose no `vertexai` field, asserted by `test_maas_classes_expose_no_vertexai_field` |
+| 6 | 429 retried then succeeds; 429 forever → `AgentPlatformUnavailableError` with the attempt count asserted | **Passing** — attempt count now hard-coded to 3 rather than compared against the constant it is meant to pin |
+| 7 | 403 / 404 → `AgentPlatformConfigError` with exactly one call | **Passing** |
+| 8 | A distinctive synthetic identifier never appears in `str(exc)` | **Passing as of the final fix wave.** It was previously VACUOUS: the identifier was never in the upstream error's message, so the assertion could not fail. It now lives inside the chained cause — the real §7.2 risk, since Google errors echo request bodies — and `repr()` is checked too |
+| 9 | Emergency question returns `safety_flag: "emergency"` and HTTP 200 while every Agent Platform call raises | **`xfail(strict=True)`, pending Epic 1 M4.** `screen_for_emergency()` is still an Epic 1 stub raising `NotImplementedError`, so the real path cannot pass yet. `test_real_answer_path_triages_emergency_while_agent_platform_is_down` runs that real path and is recorded as a strict xfail; it flips to a genuine pass when M4 lands. The sibling test covers response shaping only and no longer claims §4.3 |
+| 10 | `verify_generation_model()` rejects an unknown model with no network | **Passing** |
+| 11 | `chunk_target_tokens` above the model's limit fails at startup | **Passing**, now with a 10% safety margin below the limit rather than a bare `>` (§5.5 asks for margin) |
+| 12 | `generation_mode: "local"` performs no network call across a full ingest-and-ask cycle | **Partially pinned.** `test_local_ingest_and_retrieval_resolve_no_hostname` covers ingest+retrieve with a faked embedder. The container half is unverified — see below |
+
+- **The container offline-embedding check has NEVER been run.** Docker was unavailable in the implementing environment, so `make up` followed by `docker compose -f deployment/docker/compose.yaml run --rm --network none tara-backend python -c "..."` (plan Task 6 Step 5) has not happened. A human must run it, record `max_seq_length` and `dim`, and only then treat the container path as proven.
+- **Two residual risks are recorded rather than fixed**, both deliberately deferred to their own cycle:
+  1. `lmstudio_host` / `ollama_host` are unvalidated URLs, so a non-loopback value egresses assembled excerpts under `generation_mode: "local"` with no gate. `web_app.main()` now WARNS when the active backend's host is not loopback; it does not refuse, because LM Studio on another machine on a LAN is legitimate.
+  2. BAA coverage for Llama / Mistral MaaS specifically is still unconfirmed (spec §13 item 1).
 
 ## Global constraints
 
