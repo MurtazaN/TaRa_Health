@@ -68,9 +68,20 @@ def _chunk_single_span(doc_id: str, span: ExtractedSpan,
 
 
 def chunk_spans(doc_id: str, spans: list[ExtractedSpan],
-                target_tokens: int = 800, overlap_tokens: int = 100) -> list[Chunk]:
-    """Pack spans into ~target_tokens chunks, page-bounded, preserving provenance."""
+                target_tokens: int | None = None,
+                overlap_tokens: int | None = None) -> list[Chunk]:
+    """Pack spans into ~target_tokens chunks, page-bounded, preserving provenance.
+
+    Sizing defaults to configuration rather than a literal, because it is coupled
+    to the embedding model's sequence limit — sentence-transformers truncates
+    silently past it (M5 §5.5). Explicit arguments still win, for tests.
+    """
+    from tara.config import get_settings
+
+    settings = get_settings()
+    resolved_target = settings.chunk_target_tokens if target_tokens is None else target_tokens
+    resolved_overlap = settings.chunk_overlap_tokens if overlap_tokens is None else overlap_tokens
     chunks: list[Chunk] = []
     for span in spans:
-        chunks.extend(_chunk_single_span(doc_id, span, target_tokens, overlap_tokens))
+        chunks.extend(_chunk_single_span(doc_id, span, resolved_target, resolved_overlap))
     return chunks
