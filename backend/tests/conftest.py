@@ -98,3 +98,23 @@ def offline_ingest_env(tmp_path, monkeypatch):
 
     yield settings
     config.get_settings.cache_clear()
+
+
+@pytest.fixture(autouse=True)
+def never_resolve_real_credentials(monkeypatch):
+    """Fail loudly if any test reaches for real Google credentials.
+
+    A missed monkeypatch would otherwise attempt a live ADC lookup — slow in CI,
+    and on a developer's machine it would silently succeed and hit the network.
+    """
+    def _refuse(*args, **kwargs):
+        raise AssertionError(
+            "A test attempted to resolve Application Default Credentials. "
+            "Patch the client accessor instead (agent_platform_client._chat_model)."
+        )
+
+    try:
+        import google.auth
+    except ImportError:
+        return
+    monkeypatch.setattr(google.auth, "default", _refuse)

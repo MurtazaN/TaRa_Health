@@ -11,13 +11,13 @@ from tara.web_app import app
 
 
 @pytest.fixture
-def api_client(offline_ingest_env):
+def client(offline_ingest_env):
     return TestClient(app)
 
 
 @pytest.mark.integration
-def test_upload_ingests_pdf_and_returns_document_facts(api_client, make_pdf):
-    response = api_client.post(
+def test_upload_ingests_pdf_and_returns_document_facts(client, make_pdf):
+    response = client.post(
         "/upload",
         files={"file": ("policy.pdf", make_pdf([["Specialist copay is $40."]]),
                         "application/pdf")},
@@ -30,14 +30,14 @@ def test_upload_ingests_pdf_and_returns_document_facts(api_client, make_pdf):
 
 
 @pytest.mark.integration
-def test_upload_rejects_unsupported_extension_with_400(api_client):
-    response = api_client.post("/upload", files={"file": ("notes.exe", b"x", "text/plain")})
+def test_upload_rejects_unsupported_extension_with_400(client):
+    response = client.post("/upload", files={"file": ("notes.exe", b"x", "text/plain")})
     assert response.status_code == 400
     assert "Unsupported" in response.json()["detail"]
 
 
 @pytest.mark.integration
-def test_ask_sends_question_in_body_and_returns_answer_shape(api_client, monkeypatch):
+def test_ask_sends_question_in_body_and_returns_answer_shape(client, monkeypatch):
     from tara.question_answering.question_answerer import Answer
 
     seen_questions: list[str] = []
@@ -51,7 +51,7 @@ def test_ask_sends_question_in_body_and_returns_answer_shape(api_client, monkeyp
         )
 
     monkeypatch.setattr("tara.web_app.answer_question", fake_answer_question)
-    response = api_client.post("/ask", json={"question": "what is my copay?"})
+    response = client.post("/ask", json={"question": "what is my copay?"})
 
     assert response.status_code == 200
     body = response.json()
@@ -62,22 +62,105 @@ def test_ask_sends_question_in_body_and_returns_answer_shape(api_client, monkeyp
 
 
 @pytest.mark.integration
-def test_stale_index_maps_to_409(api_client, monkeypatch):
+def test_stale_index_maps_to_409(client, monkeypatch):
     def raise_index_mismatch(question: str, prefer_agent_platform: bool = False):
         raise IndexMismatchError("re-index required")
 
     monkeypatch.setattr("tara.web_app.answer_question", raise_index_mismatch)
-    response = api_client.post("/ask", json={"question": "anything"})
+    response = client.post("/ask", json={"question": "anything"})
     assert response.status_code == 409
 
 
 @pytest.mark.integration
-def test_ingestion_error_maps_to_400(api_client, monkeypatch):
+def test_ingestion_error_maps_to_400(client, monkeypatch):
     def raise_ingestion_error(filename: str, file_bytes: bytes):
         raise IngestionError("no extractable text")
 
     monkeypatch.setattr("tara.web_app.ingest_document", raise_ingestion_error)
-    response = api_client.post(
+    response = client.post(
         "/upload", files={"file": ("empty.pdf", b"%PDF", "application/pdf")})
     assert response.status_code == 400
     assert "no extractable text" in response.json()["detail"]
+
+
+@pytest.mark.unit
+def test_agent_platform_config_error_maps_to_500(client, monkeypatch):
+    from tara import web_app
+    from tara.app_errors import AgentPlatformConfigError
+
+    def raise_config_error(question: str, prefer_agent_platform: bool = False):
+        raise AgentPlatformConfigError("provider=gemini project=test-project")
+
+    monkeypatch.setattr(web_app, "answer_question", raise_config_error)
+    response = client.post("/ask", json={"question": "what is my deductible?"})
+    assert response.status_code == 500
+    assert "test-project" in response.json()["detail"]
+
+
+@pytest.mark.unit
+def test_agent_platform_unavailable_maps_to_503(client, monkeypatch):
+    from tara import web_app
+    from tara.app_errors import AgentPlatformUnavailableError
+
+    def raise_unavailable(question: str, prefer_agent_platform: bool = False):
+        raise AgentPlatformUnavailableError("transient")
+
+    monkeypatch.setattr(web_app, "answer_question", raise_unavailable)
+    response = client.post("/ask", json={"question": "what is my deductible?"})
+    assert response.status_code == 503
+
+
+@pytest.mark.unit
+def test_emergency_answers_while_agent_platform_is_down(client, monkeypatch):
+    """The emergency pre-check imports nothing and runs BEFORE retrieval, so a
+    Google outage must never stop a triage response (M5 §4.3)."""
+    from tara.data_models import Citation  # noqa: F401 - documents the Answer shape
+    from tara.question_answering.question_answerer import Answer
+    from tara import web_app
+    from tara.llm_clients import agent_platform_client
+
+    def always_fails():
+        raise AssertionError("Agent Platform must not be reached for an emergency")
+
+    monkeypatch.setattr(agent_platform_client, "_chat_model", always_fails)
+
+    def emergency(question: str, prefer_agent_platform: bool = False) -> Answer:
+        return Answer(text="Call 911.", citations=[], safety_flag="emergency")
+
+    monkeypatch.setattr(web_app, "answer_question", emergency)
+    response = client.post("/ask", json={"question": "crushing chest pain"})
+    assert response.status_code == 200
+    assert response.json()["safety_flag"] == "emergency"
+
+
+@pytest.mark.integration
+def test_local_ingest_and_retrieval_resolve_no_hostname(offline_ingest_env, monkeypatch, make_pdf):
+    """Spec assertion 12. Ingestion and retrieval must resolve no hostname — any
+    outbound call needs DNS first.
+
+    Scope is deliberate. It stops at retrieve_chunks() rather than
+    answer_question(), because emergency_triage.screen_for_emergency() is still
+    an Epic 1 stub that raises NotImplementedError; generation in local mode
+    reaches LM Studio over the network BY DESIGN, so it was never in scope.
+
+    What this proves: the ingest+retrieve path holds no hidden HTTP client. What
+    it does NOT prove: that the real embedding model is local, because
+    offline_ingest_env fakes the embedder. Task 6 Step 5 covers that with real
+    weights in a container with --network none.
+
+    Guards getaddrinfo rather than socket.socket, so pytest's own machinery and
+    SQLite (file-based, socket-free) are unaffected.
+    """
+    import socket
+
+    from tara.document_ingestion.ingestion_pipeline import ingest_document
+    from tara.semantic_search.chunk_retriever import retrieve_chunks
+
+    def _refuse(*args, **kwargs):
+        raise AssertionError(f"local mode attempted to resolve {args[:1]}")
+
+    monkeypatch.setattr(socket, "getaddrinfo", _refuse)
+
+    pdf_bytes = make_pdf([["Annual Deductible: $2,500 individual / $5,000 family"]])
+    ingest_document("benefits.pdf", pdf_bytes)
+    assert retrieve_chunks("what is my deductible?") is not None

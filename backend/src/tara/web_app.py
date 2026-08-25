@@ -11,7 +11,13 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
-from tara.app_errors import IndexMismatchError, IngestionError, UploadError
+from tara.app_errors import (
+    AgentPlatformConfigError,
+    AgentPlatformUnavailableError,
+    IndexMismatchError,
+    IngestionError,
+    UploadError,
+)
 from tara.config import get_settings
 from tara.document_ingestion.ingestion_pipeline import ingest_document
 from tara.question_answering.question_answerer import answer_question
@@ -33,6 +39,19 @@ def _handle_ingestion_error(request: Request, exc: IngestionError) -> JSONRespon
 def _handle_index_mismatch(request: Request, exc: IndexMismatchError) -> JSONResponse:
     # 409: the on-disk index is incompatible with the configured model (re-index).
     return JSONResponse(status_code=409, content={"detail": str(exc)})
+
+
+@app.exception_handler(AgentPlatformConfigError)
+def _handle_agent_platform_config_error(request: Request, exc: AgentPlatformConfigError) -> JSONResponse:
+    # 500: the operator must fix credentials, permissions, the model id, or the
+    # region. Retrying will not help. The message carries no user content.
+    return JSONResponse(status_code=500, content={"detail": str(exc)})
+
+
+@app.exception_handler(AgentPlatformUnavailableError)
+def _handle_agent_platform_unavailable(request: Request, exc: AgentPlatformUnavailableError) -> JSONResponse:
+    # 503: transient — quota or availability. The same request may succeed later.
+    return JSONResponse(status_code=503, content={"detail": str(exc)})
 
 
 class AskRequest(BaseModel):
@@ -95,6 +114,20 @@ def main() -> None:
     finally:
         conn.close()
     reconcile_orphan_blobs()  # sweep PHI blobs orphaned by an interrupted delete (§7)
+
+    # Startup validation (M5 §7.3). All three are deterministic and offline, so
+    # all three fail hard: a typo'd model or an oversized chunk should never be
+    # discovered by a user mid-question.
+    from tara.llm_clients.agent_platform_client import verify_generation_model
+    from tara.semantic_search.text_embedder import (
+        verify_chunk_size_fits_model,
+        verify_embedding_dimension,
+    )
+
+    if get_settings().generation_mode in ("agent_platform", "hybrid"):
+        verify_generation_model()
+    verify_chunk_size_fits_model()
+    verify_embedding_dimension()
 
     bind_host = get_settings().server_host
     if bind_host != "127.0.0.1":
