@@ -1,53 +1,58 @@
-"""get_llm_client routing: model_mode x prefer_hosted -> backend. Local mode
-must NEVER return the hosted client (no silent PHI egress)."""
+"""get_llm_client routing: generation_mode x prefer_agent_platform -> backend.
+
+Local mode must NEVER return the Agent Platform client — that is the only code
+path by which a generated answer's context leaves the device. Embeddings are
+in-process in every mode, so no routing decision can cause ingestion egress.
+"""
 from __future__ import annotations
 
 import pytest
 
 from tara import config
-from tara.llm_clients.hosted_client import HostedLLMClient
+from tara.llm_clients.agent_platform_client import AgentPlatformClient
 from tara.llm_clients.llm_client_interface import get_llm_client
 from tara.llm_clients.ollama_client import OllamaClient
 
 
 @pytest.fixture
-def model_mode(monkeypatch):
-    """Set TARA_MODEL_MODE hermetically (+ a hosted credential where required)."""
+def generation_mode(monkeypatch):
+    """Set TARA_GENERATION_MODE hermetically (+ the egress prerequisites)."""
     def _set(mode: str) -> None:
-        monkeypatch.setenv("TARA_MODEL_MODE", mode)
-        if mode in ("hosted", "hybrid"):
-            monkeypatch.setenv("TARA_HOSTED_API_KEY", "test-credential")
+        monkeypatch.setenv("TARA_GENERATION_MODE", mode)
+        if mode in ("agent_platform", "hybrid"):
+            monkeypatch.setenv("TARA_GCP_PROJECT", "test-project")
+            monkeypatch.setenv("TARA_PHI_EGRESS_ACKNOWLEDGED", "true")
         config.get_settings.cache_clear()
     yield _set
     config.get_settings.cache_clear()
 
 
 @pytest.mark.unit
-def test_local_mode_uses_local_client(model_mode):
-    model_mode("local")
+def test_local_mode_uses_local_client(generation_mode):
+    generation_mode("local")
     assert isinstance(get_llm_client(), OllamaClient)
 
 
 @pytest.mark.unit
-def test_local_mode_ignores_prefer_hosted(model_mode):
-    model_mode("local")
+def test_local_mode_ignores_the_opt_in(generation_mode):
+    generation_mode("local")
     # The per-query opt-in must be inert in local mode: no silent egress path.
-    assert isinstance(get_llm_client(prefer_hosted=True), OllamaClient)
+    assert isinstance(get_llm_client(prefer_agent_platform=True), OllamaClient)
 
 
 @pytest.mark.unit
-def test_hosted_mode_uses_hosted_client(model_mode):
-    model_mode("hosted")
-    assert isinstance(get_llm_client(), HostedLLMClient)
+def test_agent_platform_mode_uses_agent_platform_client(generation_mode):
+    generation_mode("agent_platform")
+    assert isinstance(get_llm_client(), AgentPlatformClient)
 
 
 @pytest.mark.unit
-def test_hybrid_defaults_to_local(model_mode):
-    model_mode("hybrid")
+def test_hybrid_defaults_to_local(generation_mode):
+    generation_mode("hybrid")
     assert isinstance(get_llm_client(), OllamaClient)
 
 
 @pytest.mark.unit
-def test_hybrid_prefer_hosted_opts_into_hosted(model_mode):
-    model_mode("hybrid")
-    assert isinstance(get_llm_client(prefer_hosted=True), HostedLLMClient)
+def test_hybrid_opt_in_uses_agent_platform(generation_mode):
+    generation_mode("hybrid")
+    assert isinstance(get_llm_client(prefer_agent_platform=True), AgentPlatformClient)

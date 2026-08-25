@@ -17,6 +17,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 _DEFAULT_MAX_UPLOAD_BYTES = 50 * 1024 * 1024
 
 LocalLLMBackend = Literal["ollama", "openai_compatible"]
+GenerationMode = Literal["local", "agent_platform", "hybrid"]
+AgentPlatformProvider = Literal["gemini", "llama", "mistral"]
 
 # backend/src/tara/config.py -> parents: [0]=tara, [1]=src, [2]=backend, [3]=repo root.
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -50,8 +52,10 @@ class Settings(BaseSettings):
     # Do NOT set this to "0.0.0.0" when running directly on a host.
     server_host: str = "127.0.0.1"
 
-    # ---- Model mode (§3.5) ----
-    model_mode: Literal["local", "hosted", "hybrid"] = "local"
+    # ---- Generation mode (§3.5) ----
+    # Governs GENERATION ONLY. Embeddings always run in-process and never egress,
+    # so a single setting can no longer describe both (M5 §4.2).
+    generation_mode: GenerationMode = "local"
 
     # ---- Local model ----
     # Two on-device backends are supported, chosen by `local_llm_backend`:
@@ -65,14 +69,30 @@ class Settings(BaseSettings):
     # the openai client requires a non-empty value.
     local_api_key: str = "not-needed"
 
-    # ---- Hosted model (opt-in; data leaves the device) ----
-    hosted_model: str = "claude-sonnet-4-6"
-    hosted_api_key: str = ""  # provider-specific wiring is settled in Slice 2 (§3.5)
+    # ---- Google Cloud Agent Platform (formerly Vertex AI) — GENERATION ONLY ----
+    # Required only when generation may egress. An empty project is the exact
+    # condition under which LangChain's backend auto-detection silently falls back
+    # to the consumer Gemini Developer API (generativelanguage.googleapis.com),
+    # which is NOT BAA-covered. Fail closed rather than egress to the wrong product.
+    gcp_project: str = ""
+    gcp_location: str = "us-central1"  # MaaS models are region-limited
+    agent_platform_provider: AgentPlatformProvider = "gemini"
+    # Model IDs are perishable: gemini-2.5-flash retires 2026-10-20, and the Llama
+    # allowlist is frozen per langchain-google-vertexai release. Validated at startup.
+    gemini_model: str = "gemini-3.5-flash"
+    llama_model: str = "meta/llama-3.3-70b-instruct-maas"
+    mistral_model: str = "mistral-medium-3"
 
-    # ---- Embeddings (local, on-device) ----
-    # Phase 1 serves embeddings from an OpenAI-compatible endpoint (LM Studio) at
-    # `lmstudio_host`. Embeddings never egress, even in hosted mode (§3.1e/§7).
-    embed_model: str = "text-embedding-qwen3-embedding-0.6b"
+    # Records that a human asserted a signed GCP BAA covers Agent Platform. It
+    # cannot check that; it only refuses to egress until someone says so.
+    phi_egress_acknowledged: bool = False
+
+    # ---- Embeddings (in-process; never egress, in any generation mode) ----
+    # Pinned by revision, not just name, for the same reason en_core_web_lg is a
+    # pinned wheel: an unpinned model silently changes the vector space between
+    # installs and makes every retrieval test measure a moving target.
+    embed_model: str = "Qwen/Qwen3-Embedding-0.6B"
+    embed_model_revision: str = "97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3"
     embed_dim: int = 1024
 
     # ---- Retrieval ----
@@ -102,6 +122,12 @@ class Settings(BaseSettings):
     # file, since documents may originate from a third party (insurer/provider).
     max_pdf_pages: int = 1000
 
+    # ---- Chunking (coupled to the embedding model — see M5 §5.5) ----
+    # sentence-transformers TRUNCATES SILENTLY past the model's sequence limit, so
+    # startup validates these against it rather than trusting the default.
+    chunk_target_tokens: int = 800
+    chunk_overlap_tokens: int = 100
+
     # -- Derived paths --
     @property
     def db_path(self) -> Path:
@@ -118,16 +144,30 @@ class Settings(BaseSettings):
 
     # -- Validators --
     @model_validator(mode="after")
-    def _require_hosted_key_when_egressing(self) -> "Settings":
-        """Fail loudly if the user opts into egress without a credential (§3.5).
+    def _require_gcp_project_when_generation_egresses(self) -> "Settings":
+        """Fail loudly if generation may egress without a project (M5 §5.4).
 
-        The validator is provider-agnostic on purpose: it enforces that *some*
-        hosted credential is present, not which provider it belongs to.
+        Conditional because egress is conditional: in "local" mode nothing leaves
+        the device. An empty project is what makes LangChain fall back to the
+        consumer Gemini API, so this is the guard against silent mis-routing.
         """
-        if self.model_mode in ("hosted", "hybrid") and not self.hosted_api_key.strip():
+        if self.generation_mode in ("agent_platform", "hybrid") and not self.gcp_project.strip():
             raise ValueError(
-                "model_mode is 'hosted'/'hybrid' but TARA_HOSTED_API_KEY is empty. "
-                "A hosted credential is required before any data may leave the device."
+                "generation_mode is 'agent_platform'/'hybrid' but TARA_GCP_PROJECT is "
+                "empty. An empty project silently routes generation to the consumer "
+                "Gemini Developer API, which is not covered by a GCP BAA."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _require_phi_egress_acknowledgement(self) -> "Settings":
+        """Refuse to egress until a human has asserted a BAA is in place."""
+        if self.generation_mode in ("agent_platform", "hybrid") and not self.phi_egress_acknowledged:
+            raise ValueError(
+                "generation_mode is 'agent_platform'/'hybrid' but "
+                "TARA_PHI_EGRESS_ACKNOWLEDGED is false. Answering a question sends the "
+                "retrieved excerpts to Google Cloud. Set this only once a BAA covering "
+                "Agent Platform is in place."
             )
         return self
 

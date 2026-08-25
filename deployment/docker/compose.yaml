@@ -13,7 +13,7 @@ services:
     environment:
       TARA_LMSTUDIO_HOST: "http://host.docker.internal:1234"
       TARA_OLLAMA_HOST: "http://host.docker.internal:11434"
-      TARA_MODEL_MODE: "local"
+      TARA_GENERATION_MODE: "local"
       TARA_DATA_DIR: "/data"
       TARA_FRONTEND_DIR: "/app/frontend"
       TARA_SERVER_HOST: "0.0.0.0"

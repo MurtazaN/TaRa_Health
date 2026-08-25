@@ -31,7 +31,7 @@ def isolated_env(tmp_path, monkeypatch):
     from tara import config
 
     monkeypatch.setenv("TARA_DATA_DIR", str(tmp_path / "data"))
-    monkeypatch.setenv("TARA_MODEL_MODE", "local")
+    monkeypatch.setenv("TARA_GENERATION_MODE", "local")
     config.get_settings.cache_clear()
     settings = config.get_settings()
     config.ensure_data_dirs(settings)
@@ -79,7 +79,7 @@ def offline_ingest_env(tmp_path, monkeypatch):
     from tara.semantic_search import text_embedder
 
     monkeypatch.setenv("TARA_DATA_DIR", str(tmp_path / "data"))
-    monkeypatch.setenv("TARA_MODEL_MODE", "local")
+    monkeypatch.setenv("TARA_GENERATION_MODE", "local")
     monkeypatch.setenv("TARA_EMBED_DIM", "256")
     config.get_settings.cache_clear()
     settings = config.get_settings()

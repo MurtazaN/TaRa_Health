@@ -42,7 +42,7 @@ def test_ask_sends_question_in_body_and_returns_answer_shape(api_client, monkeyp
 
     seen_questions: list[str] = []
 
-    def fake_answer_question(question: str, prefer_hosted: bool = False) -> Answer:
+    def fake_answer_question(question: str, prefer_agent_platform: bool = False) -> Answer:
         seen_questions.append(question)
         return Answer(
             text="Your copay is $40 [c1].",
@@ -63,7 +63,7 @@ def test_ask_sends_question_in_body_and_returns_answer_shape(api_client, monkeyp
 
 @pytest.mark.integration
 def test_stale_index_maps_to_409(api_client, monkeypatch):
-    def raise_index_mismatch(question: str, prefer_hosted: bool = False):
+    def raise_index_mismatch(question: str, prefer_agent_platform: bool = False):
         raise IndexMismatchError("re-index required")
 
     monkeypatch.setattr("tara.web_app.answer_question", raise_index_mismatch)

@@ -14,30 +14,49 @@ def _settings(**overrides) -> Settings:
 
 
 @pytest.mark.unit
-def test_local_mode_needs_no_hosted_key():
-    s = _settings(model_mode="local", hosted_api_key="")
-    assert s.model_mode == "local"
+def test_local_mode_needs_no_gcp_project():
+    # Nothing egresses in local mode, so demanding a project would be theatre.
+    s = _settings(generation_mode="local", gcp_project="", phi_egress_acknowledged=False)
+    assert s.generation_mode == "local"
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("mode", ["hosted", "hybrid"])
-def test_egress_modes_require_a_hosted_key(mode):
-    with pytest.raises(ValidationError, match="TARA_HOSTED_API_KEY"):
-        _settings(model_mode=mode, hosted_api_key="")
+@pytest.mark.parametrize("mode", ["agent_platform", "hybrid"])
+def test_egress_modes_require_a_gcp_project(mode):
+    with pytest.raises(ValidationError, match="TARA_GCP_PROJECT"):
+        _settings(generation_mode=mode, gcp_project="", phi_egress_acknowledged=True)
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("mode", ["hosted", "hybrid"])
-def test_egress_modes_accept_a_hosted_key(mode):
-    s = _settings(model_mode=mode, hosted_api_key="sk-secret")
-    assert s.model_mode == mode
+def test_blank_gcp_project_is_treated_as_missing():
+    with pytest.raises(ValidationError, match="TARA_GCP_PROJECT"):
+        _settings(generation_mode="agent_platform", gcp_project="   ",
+                  phi_egress_acknowledged=True)
 
 
 @pytest.mark.unit
-def test_blank_hosted_key_is_treated_as_missing():
-    # Whitespace-only must not count as a credential.
-    with pytest.raises(ValidationError):
-        _settings(model_mode="hosted", hosted_api_key="   ")
+@pytest.mark.parametrize("mode", ["agent_platform", "hybrid"])
+def test_egress_modes_require_acknowledgement(mode):
+    with pytest.raises(ValidationError, match="TARA_PHI_EGRESS_ACKNOWLEDGED"):
+        _settings(generation_mode=mode, gcp_project="my-project",
+                  phi_egress_acknowledged=False)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("mode", ["agent_platform", "hybrid"])
+def test_egress_modes_accept_project_and_acknowledgement(mode):
+    s = _settings(generation_mode=mode, gcp_project="my-project",
+                  phi_egress_acknowledged=True)
+    assert s.generation_mode == mode
+    assert s.gcp_location == "us-central1"
+
+
+@pytest.mark.unit
+def test_embed_model_is_pinned_by_revision():
+    # An unpinned model silently changes the vector space between installs.
+    s = _settings()
+    assert s.embed_model == "Qwen/Qwen3-Embedding-0.6B"
+    assert len(s.embed_model_revision) == 40  # a full git SHA
 
 
 @pytest.mark.unit

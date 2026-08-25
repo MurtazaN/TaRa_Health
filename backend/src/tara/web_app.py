@@ -40,7 +40,7 @@ class AskRequest(BaseModel):
     access logs or browser history (design §7)."""
 
     question: str
-    prefer_hosted: bool = False
+    prefer_agent_platform: bool = False
 
 # Templates and static assets share one directory in the monorepo layout;
 # index.html references "/static/app.js", so the mount keeps that URL working.
@@ -69,7 +69,7 @@ async def upload_document(file: UploadFile = File(...)):
 
 @app.post("/ask")
 def ask_question(payload: AskRequest):
-    answer = answer_question(payload.question, prefer_hosted=payload.prefer_hosted)
+    answer = answer_question(payload.question, prefer_agent_platform=payload.prefer_agent_platform)
     return {
         "answer": answer.text,
         "safety_flag": answer.safety_flag,

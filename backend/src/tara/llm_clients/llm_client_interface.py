@@ -3,7 +3,7 @@
 `LLMClient` is the protocol every backend implements — local (Ollama, or an
 OpenAI-compatible server such as LM Studio) and hosted (remote API; document
 text leaves the device). `get_llm_client()` selects which backend a caller gets,
-driven by `config.model_mode`, so switching local vs hosted is a configuration
+driven by `config.generation_mode`, so switching local vs hosted is a configuration
 change, never a code change (design §3.5).
 """
 from __future__ import annotations
@@ -19,23 +19,23 @@ class LLMClient(Protocol):
         ...
 
 
-def get_llm_client(prefer_hosted: bool = False) -> "LLMClient":
-    """Select the text-generation backend for one request, from config.model_mode.
+def get_llm_client(prefer_agent_platform: bool = False) -> "LLMClient":
+    """Select the text-generation backend for one request, from generation_mode.
 
-    - "local"  -> the local client (data stays on device)
-    - "hosted" -> the hosted client (data egresses)
-    - "hybrid" -> local unless `prefer_hosted` (the per-query opt-in)
+    - "local"          -> the configured on-device client (nothing leaves the device)
+    - "agent_platform" -> Google Cloud Agent Platform (excerpts egress)
+    - "hybrid"         -> local unless `prefer_agent_platform` (the per-query opt-in)
 
-    TODO (Slice 2): route "local" by config.local_llm_backend — OllamaClient vs the
-    OpenAI-compatible client (LM Studio). Until then local always means Ollama.
+    Local routing honours config.local_llm_backend: "openai_compatible" (LM Studio)
+    or "ollama". Both run on-device; the choice is which server is running.
     """
     from tara.config import get_settings
-    from tara.llm_clients.hosted_client import HostedLLMClient
+    from tara.llm_clients.agent_platform_client import AgentPlatformClient
     from tara.llm_clients.ollama_client import OllamaClient
 
-    model_mode = get_settings().model_mode
-    if model_mode == "hosted":
-        return HostedLLMClient()
-    if model_mode == "hybrid" and prefer_hosted:
-        return HostedLLMClient()
+    settings = get_settings()
+    if settings.generation_mode == "agent_platform":
+        return AgentPlatformClient()
+    if settings.generation_mode == "hybrid" and prefer_agent_platform:
+        return AgentPlatformClient()
     return OllamaClient()
