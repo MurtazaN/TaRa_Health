@@ -93,6 +93,32 @@ def test_model_is_constructed_with_the_pinned_revision(monkeypatch):
 
     assert captured["model"] == "Qwen/Qwen3-Embedding-0.6B"
     assert captured["kwargs"]["revision"] == "97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3"
+    # Defaults false so a fresh install can fetch the weights once; the point is
+    # that the flag is WIRED, so a host that must stay offline can set it instead
+    # of silently pulling 1.19 GB on the first ingestion (M5 §4.3).
+    assert captured["kwargs"]["local_files_only"] is False
+
+
+@pytest.mark.unit
+def test_offline_only_setting_reaches_the_model_loader(monkeypatch):
+    captured: dict = {}
+
+    class _RecordingSentenceTransformer:
+        def __init__(self, model_name_or_path, **kwargs):
+            captured["kwargs"] = kwargs
+
+    import sentence_transformers
+    from tara import config
+    monkeypatch.setenv("TARA_EMBED_MODEL_OFFLINE_ONLY", "true")
+    config.get_settings.cache_clear()
+    monkeypatch.setattr(sentence_transformers, "SentenceTransformer",
+                        _RecordingSentenceTransformer)
+    text_embedder._model.cache_clear()
+    text_embedder._model()
+    text_embedder._model.cache_clear()
+    config.get_settings.cache_clear()
+
+    assert captured["kwargs"]["local_files_only"] is True
 
 
 @pytest.mark.integration
@@ -135,6 +161,24 @@ def test_verify_chunk_size_rejects_oversized_chunks(fake_model, monkeypatch):
     from tara import config
     config.get_settings.cache_clear()
     with pytest.raises(RuntimeError, match="max_seq_length"):
+        text_embedder.verify_chunk_size_fits_model()
+    config.get_settings.cache_clear()
+
+
+@pytest.mark.unit
+def test_verify_chunk_size_rejects_chunks_inside_the_safety_margin(fake_model, monkeypatch):
+    """M5 §5.5: the guard leaves margin rather than sitting on the limit.
+
+    500 fits under the fake model's 512-token limit but lands inside the 10%
+    margin. Chunk sizes are estimated as characters // 4 and the chunker's inner
+    loop can overshoot target_tokens by a whole line, so a bare `>` against the
+    limit would pass here and still truncate a real chunk.
+    """
+    monkeypatch.setenv("TARA_CHUNK_TARGET_TOKENS", "500")
+    from tara import config
+    config.get_settings.cache_clear()
+    assert text_embedder.usable_chunk_token_ceiling() == 460   # 512 less 10%
+    with pytest.raises(RuntimeError, match="safety margin"):
         text_embedder.verify_chunk_size_fits_model()
     config.get_settings.cache_clear()
 

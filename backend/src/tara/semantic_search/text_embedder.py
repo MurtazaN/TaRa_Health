@@ -26,6 +26,14 @@ if TYPE_CHECKING:
 # because this model's "document" prompt is the empty string.
 _QUERY_PROMPT_NAME = "query"
 
+# Headroom kept below the model's sequence limit, as a fraction of it (M5 §5.5).
+# The chunker measures tokens as characters // 4 — an ESTIMATE — and its inner
+# loop may overshoot `target_tokens` by up to one whole line before it stops. A
+# guard sitting exactly on the limit would therefore pass at configuration time
+# and still truncate a real chunk, which is the silent failure the guard exists
+# to prevent.
+_SEQUENCE_LIMIT_SAFETY_MARGIN_FRACTION = 0.10
+
 
 @lru_cache
 def _model() -> "SentenceTransformer":
@@ -43,6 +51,11 @@ def _model() -> "SentenceTransformer":
     return SentenceTransformer(
         settings.embed_model,
         revision=settings.embed_model_revision,
+        # When true, load only what is already cached instead of silently pulling
+        # ~1.19 GB from Hugging Face on a cold cache — which would break the
+        # "works fully offline" guarantee on a bare host (M5 §4.3). The container
+        # gets the same effect from HF_HUB_OFFLINE.
+        local_files_only=settings.embed_model_offline_only,
     )
 
 
@@ -92,16 +105,36 @@ def model_max_sequence_length() -> int:
     return sequence_length
 
 
+def usable_chunk_token_ceiling() -> int:
+    """The largest chunk size accepted, i.e. the model's limit minus the margin.
+
+    Kept separate from the check so the ceiling can be reported in the failure
+    message and asserted directly in tests.
+    """
+    sequence_limit = model_max_sequence_length()
+    return int(sequence_limit * (1.0 - _SEQUENCE_LIMIT_SAFETY_MARGIN_FRACTION))
+
+
 def verify_chunk_size_fits_model() -> None:
-    """Fail loudly if the configured chunk size exceeds the model's limit (M5 §5.5)."""
+    """Fail loudly if the configured chunk size exceeds the model's safe ceiling (M5 §5.5).
+
+    The ceiling is the model's max_seq_length less a 10% margin, not the limit
+    itself: chunk sizing is measured with a characters-per-token ESTIMATE that can
+    overshoot, so a chunk configured exactly at the limit can still be truncated.
+    """
     settings = get_settings()
     sequence_limit = model_max_sequence_length()
-    if settings.chunk_target_tokens > sequence_limit:
+    token_ceiling = usable_chunk_token_ceiling()
+    if settings.chunk_target_tokens > token_ceiling:
+        margin_percent = int(_SEQUENCE_LIMIT_SAFETY_MARGIN_FRACTION * 100)
         raise RuntimeError(
-            f"TARA_CHUNK_TARGET_TOKENS={settings.chunk_target_tokens} exceeds the "
-            f"embedding model's max_seq_length of {sequence_limit}. Chunks would be "
-            f"silently truncated before embedding while their full text is still "
-            f"stored and cited. Lower the chunk size or choose another model."
+            f"TARA_CHUNK_TARGET_TOKENS={settings.chunk_target_tokens} exceeds {token_ceiling}, "
+            f"the embedding model's max_seq_length of {sequence_limit} less a "
+            f"{margin_percent}% safety margin. The margin is there because chunk "
+            f"sizes are estimated as characters // 4 and can overshoot, so a chunk "
+            f"sitting on the limit still risks silent truncation before embedding "
+            f"while its full text is stored and cited. Lower the chunk size or "
+            f"choose another model."
         )
 
 

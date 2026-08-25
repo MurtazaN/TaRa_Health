@@ -94,6 +94,13 @@ class Settings(BaseSettings):
     embed_model: str = "Qwen/Qwen3-Embedding-0.6B"
     embed_model_revision: str = "97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3"
     embed_dim: int = 1024
+    # Refuse to reach Hugging Face for the weights, loading only what is already
+    # cached. Defaults false so a fresh developer install can fetch the model
+    # once; set true on any host that must be provably offline, where a cold
+    # cache would otherwise pull ~1.19 GB silently on the first ingestion
+    # (M5 §4.3). The container sets HF_HUB_OFFLINE instead, which does the same
+    # job at the library level.
+    embed_model_offline_only: bool = False
 
     # ---- Retrieval ----
     top_k: int = 6
@@ -142,6 +149,17 @@ class Settings(BaseSettings):
         """Base URL for the local OpenAI-compatible server (LM Studio)."""
         return f"{self.lmstudio_host.rstrip('/')}/v1"
 
+    @property
+    def active_local_model_host(self) -> str:
+        """The host URL of the local backend `local_llm_backend` actually selects.
+
+        One place maps backend -> host, so a startup check cannot warn about the
+        host of a backend that is not in use.
+        """
+        if self.local_llm_backend == "openai_compatible":
+            return self.lmstudio_host
+        return self.ollama_host
+
     # -- Validators --
     @model_validator(mode="after")
     def _require_gcp_project_when_generation_egresses(self) -> "Settings":
@@ -173,9 +191,12 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _embed_dim_is_positive(self) -> "Settings":
-        # Static sanity only. The real model<->dim integrity check is a runtime
-        # probe against the live endpoint, compared to the stored index_meta row
-        # (§3.2) — an API-served model's dimension can't be known from its name.
+        # Static sanity only. The real model<->dim integrity check is
+        # verify_embedding_dimension(), which embeds one probe string with the
+        # IN-PROCESS model at startup and compares the result to this value and
+        # to the stored index_meta row (§3.2). There is no endpoint to probe:
+        # M5 moved embeddings in-process, so the dimension comes from the loaded
+        # weights rather than from a live API response.
         if self.embed_dim <= 0:
             raise ValueError(f"TARA_EMBED_DIM must be positive, got {self.embed_dim}")
         return self
