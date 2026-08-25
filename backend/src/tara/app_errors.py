@@ -21,3 +21,18 @@ class IndexMismatchError(RuntimeError):
     """The configured embedding model/dim differs from what the vector index was
     built with (design §3.2) — serving queries would return garbage distances, so
     the app refuses and requires a re-index. Maps to HTTP 409."""
+
+
+class AgentPlatformConfigError(RuntimeError):
+    """Agent Platform is misconfigured — missing or expired credentials, wrong
+    project, insufficient permission, or an unknown/retired model. An operator must
+    fix it; retrying will not help. Maps to HTTP 500.
+
+    Carries no user content: web_app renders str(exc) straight to the client."""
+
+
+class AgentPlatformUnavailableError(RuntimeError):
+    """Agent Platform was over quota or unavailable after bounded retry. The same
+    request may succeed later. Maps to HTTP 503.
+
+    Carries no user content: web_app renders str(exc) straight to the client."""
