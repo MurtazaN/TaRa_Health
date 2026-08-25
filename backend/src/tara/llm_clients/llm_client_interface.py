@@ -32,10 +32,13 @@ def get_llm_client(prefer_agent_platform: bool = False) -> "LLMClient":
     from tara.config import get_settings
     from tara.llm_clients.agent_platform_client import AgentPlatformClient
     from tara.llm_clients.ollama_client import OllamaClient
+    from tara.llm_clients.openai_compatible_client import OpenAICompatibleClient
 
     settings = get_settings()
     if settings.generation_mode == "agent_platform":
         return AgentPlatformClient()
     if settings.generation_mode == "hybrid" and prefer_agent_platform:
         return AgentPlatformClient()
+    if settings.local_llm_backend == "openai_compatible":
+        return OpenAICompatibleClient()
     return OllamaClient()
