@@ -72,3 +72,36 @@ def test_hybrid_defaults_to_local(generation_mode, local_llm_backend, expected_c
 def test_hybrid_opt_in_uses_agent_platform(generation_mode):
     generation_mode("hybrid")
     assert isinstance(get_llm_client(prefer_agent_platform=True), AgentPlatformClient)
+
+
+@pytest.mark.unit
+def test_local_path_never_imports_the_egress_libraries():
+    """The local path must not load the Vertex/Gemini stack it will never call.
+
+    Measured at ~1.7s and the whole LangChain-Google stack resident, on an
+    install that may have no network at all. Run in a SUBPROCESS because the rest
+    of this suite imports those packages deliberately, so an in-process check
+    could only ever pass by accident.
+    """
+    import os
+    import subprocess
+    import sys
+
+    probe = (
+        "import sys\n"
+        "from tara.llm_clients.llm_client_interface import get_llm_client\n"
+        "client = get_llm_client()\n"
+        "assert type(client).__name__ == 'OpenAICompatibleClient', type(client).__name__\n"
+        "leaked = [m for m in ('langchain_google_vertexai', 'langchain_google_genai')\n"
+        "          if m in sys.modules]\n"
+        "assert not leaked, f'local path imported {leaked}'\n"
+    )
+    completed = subprocess.run(
+        [sys.executable, "-c", probe],
+        capture_output=True,
+        text=True,
+        env={**os.environ,
+             "TARA_GENERATION_MODE": "local",
+             "TARA_LOCAL_LLM_BACKEND": "openai_compatible"},
+    )
+    assert completed.returncode == 0, completed.stderr

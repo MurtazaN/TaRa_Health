@@ -28,16 +28,23 @@ def get_llm_client(prefer_agent_platform: bool = False) -> "LLMClient":
 
     Local routing honours config.local_llm_backend: "openai_compatible" (LM Studio)
     or "ollama". Both run on-device; the choice is which server is running.
+
+    The Agent Platform client is imported INSIDE the two egress branches: the
+    local path must not pull the egress library (and the whole Vertex stack it
+    loads) merely to decide it does not need it.
     """
     from tara.config import get_settings
-    from tara.llm_clients.agent_platform_client import AgentPlatformClient
     from tara.llm_clients.ollama_client import OllamaClient
     from tara.llm_clients.openai_compatible_client import OpenAICompatibleClient
 
     settings = get_settings()
     if settings.generation_mode == "agent_platform":
+        from tara.llm_clients.agent_platform_client import AgentPlatformClient
+
         return AgentPlatformClient()
     if settings.generation_mode == "hybrid" and prefer_agent_platform:
+        from tara.llm_clients.agent_platform_client import AgentPlatformClient
+
         return AgentPlatformClient()
     if settings.local_llm_backend == "openai_compatible":
         return OpenAICompatibleClient()
