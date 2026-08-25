@@ -11,13 +11,13 @@ from tara.web_app import app
 
 
 @pytest.fixture
-def client(offline_ingest_env):
+def api_client(offline_ingest_env):
     return TestClient(app)
 
 
 @pytest.mark.integration
-def test_upload_ingests_pdf_and_returns_document_facts(client, make_pdf):
-    response = client.post(
+def test_upload_ingests_pdf_and_returns_document_facts(api_client, make_pdf):
+    response = api_client.post(
         "/upload",
         files={"file": ("policy.pdf", make_pdf([["Specialist copay is $40."]]),
                         "application/pdf")},
@@ -30,14 +30,14 @@ def test_upload_ingests_pdf_and_returns_document_facts(client, make_pdf):
 
 
 @pytest.mark.integration
-def test_upload_rejects_unsupported_extension_with_400(client):
-    response = client.post("/upload", files={"file": ("notes.exe", b"x", "text/plain")})
+def test_upload_rejects_unsupported_extension_with_400(api_client):
+    response = api_client.post("/upload", files={"file": ("notes.exe", b"x", "text/plain")})
     assert response.status_code == 400
     assert "Unsupported" in response.json()["detail"]
 
 
 @pytest.mark.integration
-def test_ask_sends_question_in_body_and_returns_answer_shape(client, monkeypatch):
+def test_ask_sends_question_in_body_and_returns_answer_shape(api_client, monkeypatch):
     from tara.question_answering.question_answerer import Answer
 
     seen_questions: list[str] = []
@@ -51,7 +51,7 @@ def test_ask_sends_question_in_body_and_returns_answer_shape(client, monkeypatch
         )
 
     monkeypatch.setattr("tara.web_app.answer_question", fake_answer_question)
-    response = client.post("/ask", json={"question": "what is my copay?"})
+    response = api_client.post("/ask", json={"question": "what is my copay?"})
 
     assert response.status_code == 200
     body = response.json()
@@ -62,29 +62,29 @@ def test_ask_sends_question_in_body_and_returns_answer_shape(client, monkeypatch
 
 
 @pytest.mark.integration
-def test_stale_index_maps_to_409(client, monkeypatch):
+def test_stale_index_maps_to_409(api_client, monkeypatch):
     def raise_index_mismatch(question: str, prefer_agent_platform: bool = False):
         raise IndexMismatchError("re-index required")
 
     monkeypatch.setattr("tara.web_app.answer_question", raise_index_mismatch)
-    response = client.post("/ask", json={"question": "anything"})
+    response = api_client.post("/ask", json={"question": "anything"})
     assert response.status_code == 409
 
 
 @pytest.mark.integration
-def test_ingestion_error_maps_to_400(client, monkeypatch):
+def test_ingestion_error_maps_to_400(api_client, monkeypatch):
     def raise_ingestion_error(filename: str, file_bytes: bytes):
         raise IngestionError("no extractable text")
 
     monkeypatch.setattr("tara.web_app.ingest_document", raise_ingestion_error)
-    response = client.post(
+    response = api_client.post(
         "/upload", files={"file": ("empty.pdf", b"%PDF", "application/pdf")})
     assert response.status_code == 400
     assert "no extractable text" in response.json()["detail"]
 
 
 @pytest.mark.unit
-def test_agent_platform_config_error_maps_to_500(client, monkeypatch):
+def test_agent_platform_config_error_maps_to_500(api_client, monkeypatch):
     from tara import web_app
     from tara.app_errors import AgentPlatformConfigError
 
@@ -92,13 +92,13 @@ def test_agent_platform_config_error_maps_to_500(client, monkeypatch):
         raise AgentPlatformConfigError("provider=gemini project=test-project")
 
     monkeypatch.setattr(web_app, "answer_question", raise_config_error)
-    response = client.post("/ask", json={"question": "what is my deductible?"})
+    response = api_client.post("/ask", json={"question": "what is my deductible?"})
     assert response.status_code == 500
     assert "test-project" in response.json()["detail"]
 
 
 @pytest.mark.unit
-def test_agent_platform_unavailable_maps_to_503(client, monkeypatch):
+def test_agent_platform_unavailable_maps_to_503(api_client, monkeypatch):
     from tara import web_app
     from tara.app_errors import AgentPlatformUnavailableError
 
@@ -106,12 +106,12 @@ def test_agent_platform_unavailable_maps_to_503(client, monkeypatch):
         raise AgentPlatformUnavailableError("transient")
 
     monkeypatch.setattr(web_app, "answer_question", raise_unavailable)
-    response = client.post("/ask", json={"question": "what is my deductible?"})
+    response = api_client.post("/ask", json={"question": "what is my deductible?"})
     assert response.status_code == 503
 
 
 @pytest.mark.unit
-def test_emergency_answers_while_agent_platform_is_down(client, monkeypatch):
+def test_emergency_answers_while_agent_platform_is_down(api_client, monkeypatch):
     """The emergency pre-check imports nothing and runs BEFORE retrieval, so a
     Google outage must never stop a triage response (M5 §4.3)."""
     from tara.data_models import Citation  # noqa: F401 - documents the Answer shape
@@ -128,7 +128,7 @@ def test_emergency_answers_while_agent_platform_is_down(client, monkeypatch):
         return Answer(text="Call 911.", citations=[], safety_flag="emergency")
 
     monkeypatch.setattr(web_app, "answer_question", emergency)
-    response = client.post("/ask", json={"question": "crushing chest pain"})
+    response = api_client.post("/ask", json={"question": "crushing chest pain"})
     assert response.status_code == 200
     assert response.json()["safety_flag"] == "emergency"
 
@@ -150,10 +150,24 @@ def test_local_ingest_and_retrieval_resolve_no_hostname(offline_ingest_env, monk
 
     Guards getaddrinfo rather than socket.socket, so pytest's own machinery and
     SQLite (file-based, socket-free) are unaffected.
+
+    Proves the embed_query() step actually ran by spying on it directly, rather
+    than by asserting retrieve_chunks() returns a non-empty list. Those are NOT
+    equivalent: with offline_ingest_env's crude bag-of-words fake embedder, the
+    single shared token between the question and the fixture PDF text scores
+    0.177 cosine similarity, under the real abstain_threshold of 0.25 — so
+    retrieve_chunks() legitimately returns [] via its abstention guard AFTER
+    calling embed_query(). Asserting non-emptiness would therefore either fail
+    on correct behaviour (abstention) or require fixture text tuned to dodge the
+    threshold, which is fragile against a threshold or fake-embedder change.
+    Spying on embed_query() isolates exactly the thing this test must prove —
+    that the query-embedding step was reached under the getaddrinfo guard — from
+    the abstention guard's unrelated relevance judgment.
     """
     import socket
 
     from tara.document_ingestion.ingestion_pipeline import ingest_document
+    from tara.semantic_search import text_embedder
     from tara.semantic_search.chunk_retriever import retrieve_chunks
 
     def _refuse(*args, **kwargs):
@@ -161,6 +175,20 @@ def test_local_ingest_and_retrieval_resolve_no_hostname(offline_ingest_env, monk
 
     monkeypatch.setattr(socket, "getaddrinfo", _refuse)
 
+    embed_query_calls: list[str] = []
+    fake_embed_query = text_embedder.embed_query  # offline_ingest_env's deterministic fake
+
+    def _spy_embed_query(text: str) -> list[float]:
+        embed_query_calls.append(text)
+        return fake_embed_query(text)
+
+    monkeypatch.setattr(text_embedder, "embed_query", _spy_embed_query)
+
     pdf_bytes = make_pdf([["Annual Deductible: $2,500 individual / $5,000 family"]])
     ingest_document("benefits.pdf", pdf_bytes)
-    assert retrieve_chunks("what is my deductible?") is not None
+    retrieve_chunks("what is my deductible?")
+    # This is the assertion that matters: it fails if a future regression makes
+    # retrieve_chunks() return early (e.g. _is_index_ready() misbehaving) without
+    # ever reaching embed_query() — the exact failure mode a non-None or
+    # non-empty check on the return value would silently let through.
+    assert embed_query_calls == ["what is my deductible?"]
