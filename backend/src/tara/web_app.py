@@ -133,11 +133,13 @@ def main() -> None:
     import uvicorn
 
     from tara.config import ensure_data_dirs
+    from tara.execution_tracing.tracer_setup import configure_tracing
     from tara.local_data_stores.db_connection import connect_db
     from tara.local_data_stores.db_schema import init_db_schema
     from tara.local_data_stores.document_purge import reconcile_orphan_blobs
     from tara.local_data_stores.vector_index import init_vector_table
 
+    configure_tracing()  # before anything else, so startup work is traced too
     ensure_data_dirs()
     init_db_schema()
     conn = connect_db()
