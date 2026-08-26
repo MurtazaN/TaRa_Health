@@ -17,6 +17,8 @@ services:
       TARA_DATA_DIR: "/data"
       TARA_FRONTEND_DIR: "/app/frontend"
       TARA_SERVER_HOST: "0.0.0.0"
+      TARA_TRACING_ENABLED: "true"
+      TARA_OTLP_ENDPOINT: "http://phoenix:6006/v1/traces"
       # Agent Platform generation only. Unused in TARA_GENERATION_MODE=local.
       GOOGLE_APPLICATION_CREDENTIALS: /gcp/adc.json
     volumes:
@@ -31,6 +33,17 @@ services:
     extra_hosts:
       # Docker Desktop supplies this on macOS; the mapping is needed on Linux.
       - "host.docker.internal:host-gateway"
+    depends_on:
+      - phoenix
+
+  phoenix:
+    image: arizephoenix/phoenix:latest
+    ports:
+      - "127.0.0.1:6006:6006"   # UI + OTLP over HTTP; loopback-only, same reasoning as the backend service
+      - "127.0.0.1:4317:4317"   # OTLP over gRPC; loopback-only
+    volumes:
+      - phoenix-data:/mnt/data
 
 volumes:
   tara-data:
+  phoenix-data:
