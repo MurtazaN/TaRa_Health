@@ -28,7 +28,6 @@ def configure_tracing() -> None:
     global _is_tracing_configured
     if _is_tracing_configured:
         return
-    _is_tracing_configured = True
 
     settings = get_settings()
     if not settings.tracing_enabled:
@@ -41,6 +40,7 @@ def configure_tracing() -> None:
         BatchSpanProcessor(OTLPSpanExporter(endpoint=settings.otlp_endpoint)),
     )
     trace.set_tracer_provider(tracer_provider)
+    _is_tracing_configured = True
 
 
 def get_tracer() -> trace.Tracer:
