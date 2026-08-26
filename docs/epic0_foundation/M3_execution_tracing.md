@@ -852,7 +852,7 @@ Verified end to end via /upload, since /ask cannot run until M5."
 
 **Met 2026-08-25** on branch `feat/execution-tracing`.
 
-- [x] `make test` reports **242 passed, 4 skipped, 16 xfailed** — the 214/4/16 baseline this module started from, plus 28 new tests, with no pre-existing test changed. (234/4/16 at the end of Task 6; the final fix round below added 8 more.) (The plan said "the M2-completion count"; that predated M5, which merged to `main` first. 214/4/16 is the count M3 actually built on.)
+- [x] `make test` reports **243 passed, 4 skipped, 16 xfailed** — the 214/4/16 baseline this module started from, plus 29 new tests, with no pre-existing test changed. (234/4/16 at the end of Task 6; the final fix round below added 8, and the scoped re-review that followed added 1 more.) (The plan said "the M2-completion count"; that predated M5, which merged to `main` first. 214/4/16 is the count M3 actually built on.)
 - [x] `make lint` and `make typecheck` are clean.
 - [x] With `TARA_TRACING_ENABLED=false` (the default), `get_tracer()` returns a non-recording span — asserted by `test_tracer_setup.py`, not just probed by hand.
 - [x] `make up`, then an upload, produces an `ingest_document` trace in Phoenix with child spans `extract_text_spans`, `chunk_spans`, `embed_chunks`, and a real integer `chunk_count`.

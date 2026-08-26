@@ -26,6 +26,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from opentelemetry import trace
+
 _SOURCE_ROOT = Path(__file__).resolve().parents[2] / "src" / "tara"
 _SPAN_EMITTER = _SOURCE_ROOT / "execution_tracing" / "span_emitter.py"
 _TRACER_SETUP = _SOURCE_ROOT / "execution_tracing" / "tracer_setup.py"
@@ -86,3 +88,20 @@ def test_every_exemption_actually_matches_something():
         if forbidden_call not in exempt_file.read_text()
     ]
     assert not unmatched_exemptions, "\n".join(unmatched_exemptions)
+
+
+def test_every_forbidden_pattern_names_a_real_opentelemetry_api():
+    """Anchor each pattern's spelling to the API it is meant to match.
+
+    `test_every_exemption_actually_matches_something` cannot cover the two
+    never-allowed patterns, because they have no exemption to check. A typo in
+    either would silently drop it from the scan while every test stayed green —
+    which is precisely how the creation hole survived six reviews.
+    """
+    for forbidden_call in _FORBIDDEN_CALLS:
+        member_name = forbidden_call.strip(".(")
+        assert (
+            hasattr(trace.Span, member_name)
+            or hasattr(trace.Tracer, member_name)
+            or hasattr(trace, member_name)
+        ), f"{forbidden_call!r} names no OpenTelemetry Span/Tracer API — likely a typo"

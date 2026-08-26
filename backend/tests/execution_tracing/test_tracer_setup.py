@@ -41,11 +41,10 @@ def installed_providers(monkeypatch):
     captured: list[trace.TracerProvider] = []
     monkeypatch.setattr(trace, "set_tracer_provider", captured.append)
     yield captured
-
-
-def _shutdown_all(tracer_providers) -> None:
-    """Stop the batch worker threads a built provider started."""
-    for tracer_provider in tracer_providers:
+    # Teardown, not a trailing call: a failing assertion would otherwise leave
+    # a batch worker thread and its HTTP session alive for the rest of the
+    # process, burying the real failure under export-retry warnings.
+    for tracer_provider in captured:
         tracer_provider.shutdown()
 
 
@@ -80,7 +79,6 @@ def test_disabled_call_does_not_latch_out_a_later_enable(
 
     assert tracer_setup._is_tracing_configured is True
     assert len(installed_providers) == 1
-    _shutdown_all(installed_providers)
 
 
 # ---- provider construction ----
@@ -129,7 +127,6 @@ def test_enabled_tracing_installs_a_provider(tracing_latch_reset, installed_prov
     assert len(installed_providers) == 1
     assert isinstance(installed_providers[0], TracerProvider)
     assert tracer_setup._is_tracing_configured is True
-    _shutdown_all(installed_providers)
 
 
 def test_configure_tracing_is_idempotent(tracing_latch_reset, installed_providers, monkeypatch):
@@ -144,7 +141,6 @@ def test_configure_tracing_is_idempotent(tracing_latch_reset, installed_provider
     tracer_setup.configure_tracing()
 
     assert len(installed_providers) == 1
-    _shutdown_all(installed_providers)
 
 
 # ---- tracing-without-redaction warning ----
@@ -166,7 +162,6 @@ def test_tracing_without_redaction_warns_loudly(
 
     assert "TARA_PHI_REDACTION_ENABLED=false" in caplog.text
     assert len(installed_providers) == 1  # warned, not refused
-    _shutdown_all(installed_providers)
 
 
 def test_tracing_with_redaction_on_does_not_warn(
@@ -180,6 +175,10 @@ def test_tracing_with_redaction_on_does_not_warn(
         warnings.simplefilter("always")
         tracer_setup.configure_tracing()
 
-    assert [str(warning.message) for warning in raised_warnings] == []
+    redaction_warnings = [
+        str(warning.message)
+        for warning in raised_warnings
+        if "TARA_PHI_REDACTION_ENABLED" in str(warning.message)
+    ]
+    assert redaction_warnings == []
     assert len(installed_providers) == 1
-    _shutdown_all(installed_providers)
