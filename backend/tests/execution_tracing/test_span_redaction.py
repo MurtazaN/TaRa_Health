@@ -49,3 +49,22 @@ def test_empty_attribute_map_returns_a_new_empty_map(settings_cache_isolated):
 def test_sequence_valued_attributes_are_redacted(settings_cache_isolated):
     redacted = redact_span_attributes({"excerpts": ["Michael Okonkwo has a dental claim"]})
     assert "Michael Okonkwo" not in redacted["excerpts"][0]
+
+
+@pytest.mark.integration
+def test_bytes_valued_attributes_are_redacted(settings_cache_isolated):
+    """OTel accepts `bytes` and decodes it to a plain string on the span, so a
+    bytes attribute leaks exactly like a raw string would. `ingest_document`
+    holds the uploaded document's raw bytes, which makes this one careless
+    `record_span_attribute(span, "head", file_bytes[:200])` away from live.
+    """
+    redacted = redact_span_attributes({"raw": b"Member Michael Okonkwo id XQZ8842190"})
+    assert isinstance(redacted["raw"], bytes)
+    assert b"Michael Okonkwo" not in redacted["raw"]
+
+
+@pytest.mark.integration
+def test_bytes_nested_in_a_sequence_are_redacted(settings_cache_isolated):
+    redacted = redact_span_attributes({"heads": [b"Michael Okonkwo signed here"]})
+    assert isinstance(redacted["heads"][0], bytes)
+    assert b"Michael Okonkwo" not in redacted["heads"][0]

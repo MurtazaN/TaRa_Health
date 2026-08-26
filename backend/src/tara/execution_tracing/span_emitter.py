@@ -12,6 +12,11 @@ joined with underscores), and redaction cannot be trusted to clean it:
 Presidio does not recognise underscore-joined names, so the filename would
 reach the span unredacted. Those defaults are disabled here; only the
 exception's type — diagnostic and identity-free — is recorded.
+
+Redaction covers span ATTRIBUTES only. A span NAME is passed to OTel verbatim,
+so every `span_name` must be a compile-time constant naming a step
+(`ingest_document`, `retrieve_chunks`) — never an f-string carrying a filename,
+a question, or any other runtime value.
 """
 from __future__ import annotations
 
@@ -31,6 +36,10 @@ def traced_span(span_name: str, /, **attributes: Any) -> Iterator[Span]:
     A no-op tracer is returned when tracing is disabled, so callers never branch.
     `span_name` is positional-only so it cannot collide with an attribute of
     the same name passed through `**attributes`.
+
+    `span_name` is NOT redacted — it must be a compile-time constant. Only
+    `attributes` pass through `redact_span_attributes()`; a name built from a
+    runtime value reaches the exporter exactly as written.
 
     An exception escaping the `with` block is recorded by type only — its
     message and stacktrace are dropped rather than redacted, because a
