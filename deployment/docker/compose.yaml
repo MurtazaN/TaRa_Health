@@ -1,5 +1,6 @@
-# Two services. LM Studio deliberately stays on the HOST - it needs direct
-# graphics-hardware access - and the backend reaches it via host.docker.internal.
+# Two services: the backend, and Phoenix as the trace viewer (Epic 0 M3).
+# LM Studio deliberately stays on the HOST - it needs direct graphics-hardware
+# access - and the backend reaches it via host.docker.internal.
 name: tara
 services:
   tara-backend:
@@ -17,6 +18,8 @@ services:
       TARA_DATA_DIR: "/data"
       TARA_FRONTEND_DIR: "/app/frontend"
       TARA_SERVER_HOST: "0.0.0.0"
+      TARA_TRACING_ENABLED: "true"
+      TARA_OTLP_ENDPOINT: "http://phoenix:6006/v1/traces"
       # Agent Platform generation only. Unused in TARA_GENERATION_MODE=local.
       GOOGLE_APPLICATION_CREDENTIALS: /gcp/adc.json
     volumes:
@@ -31,6 +34,23 @@ services:
     extra_hosts:
       # Docker Desktop supplies this on macOS; the mapping is needed on Linux.
       - "host.docker.internal:host-gateway"
+    depends_on:
+      - phoenix
+
+  phoenix:
+    image: arizephoenix/phoenix:latest
+    environment:
+      # Required, not cosmetic: unset, Phoenix writes its store to $HOME/.phoenix
+      # inside the container, the phoenix-data volume below silently receives
+      # nothing, traces vanish on `make down`, and PHI-derived span data sits in
+      # an unmanaged writable layer instead of the volume someone would purge.
+      PHOENIX_WORKING_DIR: /mnt/data
+    ports:
+      - "127.0.0.1:6006:6006"   # UI + OTLP over HTTP; loopback-only, same reasoning as the backend service
+      - "127.0.0.1:4317:4317"   # OTLP over gRPC; loopback-only
+    volumes:
+      - phoenix-data:/mnt/data
 
 volumes:
   tara-data:
+  phoenix-data:

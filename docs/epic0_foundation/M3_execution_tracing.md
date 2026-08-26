@@ -26,14 +26,29 @@
 
 ## File Structure
 
+Every file the module ships, as built — rows 8-10 are test artifacts added beyond the plan, and rows 11-19 are files outside the plane that this module modifies.
+
 | # | Path | Responsibility |
 |---|---|---|
 | 1 | `backend/src/tara/execution_tracing/__init__.py` | Empty, per the existing package convention. |
-| 2 | `backend/src/tara/execution_tracing/span_redaction.py` | `redact_span_attributes(dict) -> dict`. |
-| 3 | `backend/src/tara/execution_tracing/tracer_setup.py` | Installs the tracer provider once; `get_tracer()`. |
-| 4 | `backend/src/tara/execution_tracing/span_emitter.py` | `traced_span()` — the only way this app makes spans. |
-| 5 | `backend/tests/execution_tracing/test_span_redaction.py` | Redaction-of-attributes tests. |
-| 6 | `backend/tests/execution_tracing/test_span_emitter.py` | Span emission tests, using an in-memory exporter. |
+| 2 | `backend/src/tara/execution_tracing/span_redaction.py` | `redact_span_attributes(dict) -> dict` — redacts `str` and `bytes`, at the top level and one level inside a `list`/`tuple`. |
+| 3 | `backend/src/tara/execution_tracing/tracer_setup.py` | `configure_tracing()` (lock-guarded, idempotent, warns when tracing is on with redaction off), `_build_tracer_provider()`, `get_tracer()`. |
+| 4 | `backend/src/tara/execution_tracing/span_emitter.py` | `traced_span()` and `record_span_attribute()` — the only way this app makes spans. |
+| 5 | `backend/tests/execution_tracing/__init__.py` | Empty. |
+| 6 | `backend/tests/execution_tracing/test_span_redaction.py` | Redaction-of-attributes tests, including the `str`/`bytes` sequence cases. |
+| 7 | `backend/tests/execution_tracing/test_span_emitter.py` | Span emission tests, against a real in-memory exporter. |
+| 8 | `backend/tests/execution_tracing/test_tracer_setup.py` | **Beyond plan** (deviation 9). Disabled path, latch ordering, provider construction, enabled path, idempotency, and the redaction-off warning. |
+| 9 | `backend/tests/execution_tracing/test_span_discipline.py` | **Beyond plan** (deviations 8, 11). Source scan: no module outside `span_emitter.py` creates or mutates a raw span. |
+| 10 | `backend/tests/execution_tracing/test_pipeline_instrumentation.py` | **Beyond plan** (deviation 7). Asserts the seven span names, their attributes, and that no span carries PHI. |
+| 11 | `backend/pyproject.toml` | OTel SDK and OTLP-over-HTTP exporter dependencies (Task 1). |
+| 12 | `backend/src/tara/config.py` | `tracing_enabled`, `otlp_endpoint`, `service_name` (Task 1). |
+| 13 | `.env.example` | The three tracing keys, plus the note on the unreachable-collector shutdown delay (deviation 16). |
+| 14 | `backend/src/tara/web_app.py` | `configure_tracing()` as the first statement of `main()`. |
+| 15 | `backend/src/tara/document_ingestion/ingestion_pipeline.py` | Ingestion spans (Task 5). |
+| 16 | `backend/src/tara/semantic_search/chunk_retriever.py` | Retrieval spans (Task 5). |
+| 17 | `deployment/docker/compose.yaml` | `phoenix` service, `phoenix-data` volume, `PHOENIX_WORKING_DIR`, and the backend's tracing env. |
+| 18 | `CLAUDE.md` | The tracing plane's cross-cutting constraint. |
+| 19 | `docs/epic0_foundation/README.md` | Status, build-order row, and §8.1 Compose services. |
 
 ---
 
@@ -52,7 +67,7 @@
 - The Presidio dependencies and the `phi_redaction_*` settings already landed in [M2](M2_phi_redaction.md) Task 1. Do not re-add them.
 - Tracing defaults to **off** because a span carries the user's question and retrieved document text. Redaction is the second line of defence, not the first.
 
-- [ ] **Step 1: Add the dependencies**
+- [x] **Step 1: Add the dependencies**
 
 In `backend/pyproject.toml`, add to `dependencies`:
 
@@ -66,7 +81,7 @@ In `backend/pyproject.toml`, add to `dependencies`:
 
 **Also deliberately not added:** OpenLLMetry. See [README §11](README.md) for the recorded reasoning and its revisit trigger.
 
-- [ ] **Step 2: Add the settings**
+- [x] **Step 2: Add the settings**
 
 In `backend/src/tara/config.py`, add inside `class Settings`, directly after the PHI-redaction block M2 created:
 
@@ -80,7 +95,7 @@ In `backend/src/tara/config.py`, add inside `class Settings`, directly after the
     service_name: str = "tara-backend"
 ```
 
-- [ ] **Step 3: Document the settings**
+- [x] **Step 3: Document the settings**
 
 Append to `.env.example`:
 
@@ -93,14 +108,14 @@ TARA_OTLP_ENDPOINT=http://localhost:6006/v1/traces
 TARA_SERVICE_NAME=tara-backend
 ```
 
-- [ ] **Step 4: Install and verify nothing changed**
+- [x] **Step 4: Install and verify nothing changed**
 
 ```bash
 uv pip install -e "./backend[dev]"
 cd backend && python -m pytest -q 2>&1 | grep -E "passed|failed" | tail -1
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/pyproject.toml backend/src/tara/config.py .env.example
@@ -129,7 +144,7 @@ viewing backend is an endpoint change rather than a code change."
 - Non-string values pass through untouched. Counts, scores, and token totals carry no identity, and they are precisely the numbers a trace exists to show.
 - This runs before the value reaches the span, which is stronger than redacting on export.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `backend/tests/execution_tracing/__init__.py` (empty file), then `backend/tests/execution_tracing/test_span_redaction.py`:
 
@@ -173,12 +188,12 @@ def test_empty_attribute_map_returns_empty(redaction_on):
     assert redact_span_attributes({}) == {}
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `cd backend && python -m pytest tests/execution_tracing/test_span_redaction.py -q`
 Expected: FAIL with `ModuleNotFoundError: No module named 'tara.execution_tracing'`
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Create `backend/src/tara/execution_tracing/__init__.py` as an empty file, then `backend/src/tara/execution_tracing/span_redaction.py`:
 
@@ -212,12 +227,12 @@ def redact_span_attributes(attributes: dict[str, Any]) -> dict[str, Any]:
     }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `cd backend && python -m pytest tests/execution_tracing/test_span_redaction.py -q`
 Expected: `4 passed`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/src/tara/execution_tracing/ backend/tests/execution_tracing/
@@ -248,7 +263,7 @@ enters a span cannot leak through a swapped exporter."
 - `get_tracer()` is safe to call before configuration; OpenTelemetry returns a no-op tracer, so instrumented code never has to check whether tracing is on.
 - The provider is installed in `main()`, the composition root — not at import time, which would fire during tests.
 
-- [ ] **Step 1: Write the implementation**
+- [x] **Step 1: Write the implementation**
 
 Create `backend/src/tara/execution_tracing/tracer_setup.py`:
 
@@ -307,7 +322,7 @@ def get_tracer() -> trace.Tracer:
     return trace.get_tracer(_TRACER_NAME)
 ```
 
-- [ ] **Step 2: Wire it into the composition root**
+- [x] **Step 2: Wire it into the composition root**
 
 In `backend/src/tara/web_app.py`, inside `main()`, add the import and the call as the **first** statement in the function body, before `ensure_data_dirs()`:
 
@@ -317,7 +332,7 @@ In `backend/src/tara/web_app.py`, inside `main()`, add the import and the call a
     configure_tracing()  # before anything else, so startup work is traced too
 ```
 
-- [ ] **Step 3: Verify tracing stays off by default**
+- [x] **Step 3: Verify tracing stays off by default**
 
 ```bash
 cd backend && python -c "
@@ -330,12 +345,12 @@ with get_tracer().start_as_current_span('probe') as span:
 
 Expected: `recording: False` — the no-op tracer, because `tracing_enabled` defaults to false.
 
-- [ ] **Step 4: Verify the full suite still passes**
+- [x] **Step 4: Verify the full suite still passes**
 
 Run: `cd backend && python -m pytest -q 2>&1 | tail -1`
 Expected: the M2-completion count plus this module's new tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/src/tara/execution_tracing/tracer_setup.py backend/src/tara/web_app.py
@@ -365,7 +380,7 @@ tracer - so instrumented code never branches on whether tracing is on."
 - The test uses OpenTelemetry's `InMemorySpanExporter` with a `SimpleSpanProcessor`, so it asserts on real spans without a network call or a running Phoenix.
 - Attribute names follow OpenInference conventions where one exists; project-specific names are used otherwise.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `backend/tests/execution_tracing/test_span_emitter.py`:
 
@@ -440,12 +455,12 @@ def test_exception_inside_the_span_propagates(captured_spans):
     assert captured_spans.get_finished_spans()[0].name == "failing_step"
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `cd backend && python -m pytest tests/execution_tracing/test_span_emitter.py -q`
 Expected: FAIL with `ModuleNotFoundError: No module named 'tara.execution_tracing.span_emitter'`
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Create `backend/src/tara/execution_tracing/span_emitter.py`:
 
@@ -455,28 +470,50 @@ Create `backend/src/tara/execution_tracing/span_emitter.py`:
 `traced_span()` is the single way this application creates spans. Centralizing
 creation is what guarantees redaction cannot be forgotten at a call site — a
 per-call-site `set_attribute` would eventually leak.
+
+OTel's `start_as_current_span` defaults to recording an escaping exception's
+message and stacktrace, and copying the message into the span status
+description — none of which passes through `redact_span_attributes()`. An
+ingestion error carries the uploaded filename (e.g. a member id or a name
+joined with underscores), and redaction cannot be trusted to clean it:
+Presidio does not recognise underscore-joined names, so the filename would
+reach the span unredacted. Those defaults are disabled here; only the
+exception's type — diagnostic and identity-free — is recorded.
 """
 from __future__ import annotations
 
 from contextlib import contextmanager
 from typing import Any, Iterator
 
-from opentelemetry.trace import Span
+from opentelemetry.trace import Span, Status, StatusCode
 
 from tara.execution_tracing.span_redaction import redact_span_attributes
 from tara.execution_tracing.tracer_setup import get_tracer
 
 
 @contextmanager
-def traced_span(span_name: str, **attributes: Any) -> Iterator[Span]:
+def traced_span(span_name: str, /, **attributes: Any) -> Iterator[Span]:
     """Open a span named `span_name`, carrying `attributes` with PHI removed.
 
     A no-op tracer is returned when tracing is disabled, so callers never branch.
+    `span_name` is positional-only so it cannot collide with an attribute of
+    the same name passed through `**attributes`.
+
+    An exception escaping the `with` block is recorded by type only — its
+    message and stacktrace are dropped rather than redacted, because a
+    filename-bearing message cannot be trusted to come back clean.
     """
-    with get_tracer().start_as_current_span(span_name) as span:
+    with get_tracer().start_as_current_span(
+        span_name, record_exception=False, set_status_on_exception=False,
+    ) as span:
         for attribute_name, attribute_value in redact_span_attributes(attributes).items():
             span.set_attribute(attribute_name, attribute_value)
-        yield span
+        try:
+            yield span
+        except BaseException as raised_error:
+            span.set_status(Status(StatusCode.ERROR, type(raised_error).__qualname__))
+            span.add_event("exception", {"exception.type": type(raised_error).__qualname__})
+            raise
 
 
 def record_span_attribute(span: Span, attribute_name: str, attribute_value: Any) -> None:
@@ -484,22 +521,44 @@ def record_span_attribute(span: Span, attribute_name: str, attribute_value: Any)
 
     Needed for values only known at the end of a step — a result count, an
     answer — which cannot be passed to `traced_span()` up front.
+
+    OTel silently drops attribute values of an unsupported type (`None`, a
+    `dict`, ...): it logs a warning to stderr and records nothing for that
+    attribute rather than raising, so a caller passing such a value gets no
+    attribute on the span and no exception telling it why.
     """
     redacted_attributes = redact_span_attributes({attribute_name: attribute_value})
     span.set_attribute(attribute_name, redacted_attributes[attribute_name])
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+
+> **As built, this deviates from the code above.** Review of Task 4 found that
+> OTel's `start_as_current_span()` defaults to `record_exception=True,
+> set_status_on_exception=True`, which writes an escaping exception's message,
+> its stacktrace, and the span status description onto the span **without**
+> passing them through `redact_span_attributes()`. That is live, not
+> theoretical: Task 5 wraps `ingest_document()` in a span, and
+> `ingestion_pipeline.py` raises `IngestionError(f"No extractable text in
+> '{filename}'.")` inside it — putting the uploaded filename on the span.
+> Redaction cannot rescue it, because Presidio does not recognise
+> underscore-joined names and real uploads are named that way
+> (`redact_phi("Michael_Okonkwo_member_XQZ8842190.pdf")` returns the string
+> unchanged). The message and stacktrace are therefore **dropped**, not
+> redacted; only the exception type is recorded. The block above is the
+> corrected, shipped version.
+
+
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `cd backend && python -m pytest tests/execution_tracing/test_span_emitter.py -q`
 Expected: `5 passed`
 
-- [ ] **Step 5: Verify the full suite still passes**
+- [x] **Step 5: Verify the full suite still passes**
 
 Run: `cd backend && python -m pytest -q 2>&1 | tail -1`
 Expected: the M2-completion count plus this module's new tests.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/src/tara/execution_tracing/span_emitter.py backend/tests/execution_tracing/test_span_emitter.py
@@ -530,7 +589,7 @@ on actual spans rather than on a mock."
 - Import direction holds: capability → plane is permitted.
 - Attributes must be primitives. Never put a chunk's text or a filename on a span; put counts, scores, and identifiers.
 
-- [ ] **Step 1: Instrument the retrieval path**
+- [x] **Step 1: Instrument the retrieval path**
 
 In `backend/src/tara/semantic_search/chunk_retriever.py`, add the import:
 
@@ -582,7 +641,7 @@ def retrieve_chunks(question: str, doc_type_hint: str | None = None) -> list[Ret
         return results
 ```
 
-- [ ] **Step 2: Instrument the ingestion path**
+- [x] **Step 2: Instrument the ingestion path**
 
 In `backend/src/tara/document_ingestion/ingestion_pipeline.py`, add the import:
 
@@ -623,12 +682,12 @@ Then wrap the whole function body in an outer span by inserting immediately afte
 
 and indenting the remainder of the function body one level.
 
-- [ ] **Step 3: Verify behaviour is unchanged**
+- [x] **Step 3: Verify behaviour is unchanged**
 
 Run: `cd backend && python -m pytest -q 2>&1 | tail -1`
 Expected: the M2-completion count plus this module's new tests. — instrumentation must not change any test outcome.
 
-- [ ] **Step 4: Lint and typecheck**
+- [x] **Step 4: Lint and typecheck**
 
 ```bash
 make lint && make typecheck
@@ -636,7 +695,7 @@ make lint && make typecheck
 
 Expected: both clean.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/src/tara/semantic_search/chunk_retriever.py backend/src/tara/document_ingestion/ingestion_pipeline.py
@@ -670,7 +729,7 @@ Epic 1 M4 alongside it."
 - Because `/ask` cannot run until M5, **the end-to-end verification uses `/upload`**, which works today.
 - **Publish loopback-only**, the same fix Epic 0 M1's final-review fix wave applies to the backend service (F1): Phoenix will hold span data derived from health documents, and an all-interfaces publish (`"6006:6006"`) would expose it to anyone on the local network. Recorded here so the fix is not re-litigated when this task is actually built.
 
-- [ ] **Step 1: Add the Phoenix service**
+- [x] **Step 1: Add the Phoenix service**
 
 In `deployment/docker/compose.yaml`, add to `services`:
 
@@ -704,7 +763,7 @@ Add to the top-level `volumes` block:
   phoenix-data:
 ```
 
-- [ ] **Step 2: Document the new settings in .env.example**
+- [x] **Step 2: Document the new settings in .env.example** — **SUPERSEDED: verify only, append nothing.** Task 1 Step 3 already added the three tracing keys and M2 already added the PHI block. Running the block below verbatim duplicates three keys and pastes a weaker copy of M2's `TARA_PHI_REDACTION_NLP_MODEL` warning. Confirm each key appears exactly once and the PHI block is intact; leave the file unchanged.
 
 Append to `.env.example`:
 
@@ -724,7 +783,7 @@ TARA_PHI_REDACTION_ENABLED=true
 # re-introduce a model-recall gap that was measured and fixed in M2.
 ```
 
-- [ ] **Step 3: Bring the stack up**
+- [x] **Step 3: Bring the stack up**
 
 ```bash
 make up
@@ -735,7 +794,7 @@ curl -s -o /dev/null -w "backend:%{http_code}\n" http://127.0.0.1:8000/
 
 Expected: `phoenix:200` and `backend:200`
 
-- [ ] **Step 4: Generate a trace by uploading a document**
+- [x] **Step 4: Generate a trace by uploading a document**
 
 ```bash
 cd backend && python -c "
@@ -750,7 +809,7 @@ curl -s -F "file=@/tmp/probe.pdf" http://127.0.0.1:8000/upload
 
 Expected: a JSON body containing `doc_id`, `filename`, and `doc_type`.
 
-- [ ] **Step 5: Verify the trace arrived and is redacted**
+- [x] **Step 5: Verify the trace arrived and is redacted** — **SUPERSEDED: do this programmatically, not in a browser.** Query Phoenix's REST API (`GET /v1/projects/default/spans`, plus `.../spans/otlpv1` for a raw-text scan) and assert all four items below in code. Item 4 is this module's acceptance criterion; eyeballing it verifies nothing and leaves no regression guard.
 
 Open `http://localhost:6006` in a browser. Confirm all four:
 
@@ -761,7 +820,7 @@ Open `http://localhost:6006` in a browser. Confirm all four:
 
 Item 4 is the acceptance criterion for this module. If it fails, stop and fix redaction before proceeding.
 
-- [ ] **Step 6: Tear down and document the plane**
+- [x] **Step 6: Tear down and document the plane**
 
 ```bash
 make down
@@ -773,7 +832,7 @@ In `CLAUDE.md`, add to the "Cross-cutting design constraints" list:
 - **Tracing is opt-in and redacted at set time.** `execution_tracing/` wraps OpenTelemetry; `traced_span()` is the only span-creation path, and it runs every string attribute through `phi_redaction` before the value reaches the span. Instrumentation is vendor-neutral OTLP, so the backend (Phoenix by default, Langfuse a documented swap) is an endpoint change, never a code change.
 ```
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add deployment/docker/compose.yaml .env.example CLAUDE.md
@@ -791,8 +850,51 @@ Verified end to end via /upload, since /ask cannot run until M5."
 
 ## M3 acceptance
 
-- [ ] `make test` reports the M2-completion count plus this module's new tests, with no pre-existing test changed.
-- [ ] `make lint` and `make typecheck` are clean.
-- [ ] With `TARA_TRACING_ENABLED=false` (the default), `get_tracer()` returns a non-recording span — nothing changed for a developer who has not opted in.
-- [ ] `make up`, then an upload, produces an `ingest_document` trace in Phoenix with child spans and numeric attributes.
-- [ ] No span attribute contains a person name or a member identifier.
+**Met 2026-08-25** on branch `feat/execution-tracing`.
+
+- [x] `make test` reports **243 passed, 4 skipped, 16 xfailed** — the 214/4/16 baseline this module started from, plus 29 new tests, with no pre-existing test changed. (234/4/16 at the end of Task 6; the final fix round below added 8, and the scoped re-review that followed added 1 more.) (The plan said "the M2-completion count"; that predated M5, which merged to `main` first. 214/4/16 is the count M3 actually built on.)
+- [x] `make lint` and `make typecheck` are clean.
+- [x] With `TARA_TRACING_ENABLED=false` (the default), `get_tracer()` returns a non-recording span — asserted by `test_tracer_setup.py`, not just probed by hand.
+- [x] `make up`, then an upload, produces an `ingest_document` trace in Phoenix with child spans `extract_text_spans`, `chunk_spans`, `embed_chunks`, and a real integer `chunk_count`.
+- [x] No span attribute contains a person name or a member identifier — verified programmatically against Phoenix's REST API (see "As built" below), and guarded in the suite by `test_no_span_carries_phi` and `test_no_span_carries_an_exception_message`.
+
+---
+
+## As built — deviations from this plan
+
+Sixteen deviations, each ruled during execution or in the whole-branch review, and recorded here so the next reader trusts the code over the plan. Deviations 1-9 were ruled per task; 10-16 came from the whole-branch review that ran after every task-level review had already passed.
+
+| # | Plan said | As built | Why |
+|---|---|---|---|
+| 1 | Task 4 Step 3 creates the span with OTel's defaults | `record_exception=False, set_status_on_exception=False`; only the exception **type** is recorded | OTel's defaults wrote an escaping exception's message, stacktrace, and status description onto the span, bypassing redaction. Live via `ingest_document()`, which raises with the uploaded filename in the message. See the note in Task 4. |
+| 2 | Task 3 sets `_is_tracing_configured = True` before the `tracing_enabled` check | Latch set **after** `trace.set_tracer_provider(...)` | The plan's ordering meant one call while disabled permanently prevented tracing from ever turning on, silently. Guarded by `test_disabled_call_does_not_latch_out_a_later_enable`. |
+| 3 | `redact_span_attributes` redacts string values | Also recurses one level into `list`/`tuple` values | OTel's attribute contract permits `Sequence[str]`, so a string hiding in a list reached the span unredacted. Latent — no call site passes a list today. |
+| 4 | Task 5 records `index_ready=False` on the not-ready retrieval path | Also records `abstained=True` there | Every other path records `abstained`, so a query for `abstained = true` meaning "returned nothing" silently undercounted. |
+| 5 | Task 6 Step 2 appends a tracing block and a PHI block to `.env.example` | **Verify-only; nothing appended** | Task 1 Step 3 already added the three tracing keys, and M2 already added the PHI block with its `TARA_PHI_REDACTION_NLP_MODEL` warning. Running Step 2 verbatim duplicated three keys and pasted a weaker copy of M2's warning. |
+| 6 | Task 6 Step 5 verifies the trace by opening Phoenix in a browser | A script queries Phoenix's REST API (`/v1/projects/default/spans` and `.../spans/otlpv1`) and asserts all four items in code | An acceptance criterion that is only eyeballed is not verified, and leaves no regression guard behind. |
+| 7 | Tasks 5 adds no tests | Adds `test_pipeline_instrumentation.py` (5 tests) | Every span name and attribute was a string literal no assertion touched; after Task 6 there would have been no executable artifact anywhere asserting M3 met its own acceptance criterion. |
+| 8 | — | Adds `test_span_discipline.py` | `traced_span()` yields the raw `Span`, so the "only span-creation path" guarantee was convention, not construction. The test fails, naming file and line, if any module outside `span_emitter.py` touches `.set_attribute(`, `.add_event(`, `.record_exception(`, or `.set_status(`. Widened by deviation 11 below. |
+| 9 | Task 3 adds no tests | Adds `test_tracer_setup.py` | "Behaviour-neutral when tracing is off" was a Global Constraint backed only by a probe run once by hand. Shipped beyond plan at Task 3, then extended in the final fix round (deviations 13-14). |
+
+**Deviations 10-16 come from the whole-branch review**, after every per-task review had passed. Each is a gap six task-level reviews looked straight past.
+
+| # | Plan said | As built | Why |
+|---|---|---|---|
+| 10 | Deviation 3 redacts `str`, and `str` inside a `list`/`tuple` | Also redacts `bytes`, both top-level and inside a sequence | Deviation 3 reasoned from "OTel permits `Sequence[str]`" and stopped there. OTel's real `_VALID_ATTR_VALUE_TYPES` is `(bool, str, bytes, int, float)`, and OTel **decodes `bytes` to a plain string** on the span. Reproduced: `traced_span("t", raw=b"Member Michael Okonkwo id XQZ8842190")` landed verbatim. Latent — no call site passes bytes — but `ingest_document(filename, file_bytes)` holds the raw document bytes. |
+| 11 | Deviation 8 scans four span-**mutation** calls | Also scans span **creation** — `.start_as_current_span(`, `.start_span(`, `get_tracer(` — with exemptions keyed per (pattern, file) | Deviation 8's threat model was the yielded raw `Span`, so every reviewer looked past the `attributes=` kwarg on the creation API. Reproduced: `start_as_current_span("ask", attributes={"question": "Is Michael Okonkwo covered?"})` puts PHI on a span unredacted and the mutation-only scan flagged nothing. `tracer_setup.py` is exempt for `get_tracer(` **only** — a blanket file exemption would reopen the creation hole inside the tracing plane itself. |
+| 12 | Task 6 mounts `phoenix-data:/mnt/data` | Also sets `PHOENIX_WORKING_DIR: /mnt/data` on the `phoenix` service | Phoenix defaults its store to `$HOME/.phoenix`, so the declared volume received nothing: traces vanished on `make down`, and PHI-derived span data sat in an unmanaged container writable layer rather than the named volume anyone would purge. Six reviews read the Compose file; none looked inside the container. Verified in-container after the fix: `/mnt/data/phoenix.db` present, `~/.phoenix` absent. |
+| 13 | Task 3 guards the latch with a plain check-then-act | `configure_tracing()`'s body runs under a module-level `threading.Lock`; `_build_tracer_provider()` is extracted and tested directly | Concurrent callers would each build a `BatchSpanProcessor`, leaving N-1 abandoned worker threads and HTTP sessions. Precautionary — only `main()` calls it today. The extraction exists so the enabled path is testable without a global `set_tracer_provider()` install, which would leak into the whole suite; coverage of `tracer_setup.py` went 76% -> 100%. |
+| 14 | — | `configure_tracing()` emits both a `logging.error` and a `warnings.warn` when `tracing_enabled and not phi_redaction_enabled` | `redact_phi()` degrades to identity when redaction is off, announcing it with one easy-to-miss per-process warning; combined with tracing, raw strings reach spans. Deliberately a warning and **not** a refusal: `.env.example` sanctions disabling redaction "for local debugging on synthetic data", and tracing is exactly what you want on while doing that. |
+| 15 | — | Docstring note: span **names** are never redacted and must be compile-time constants | `traced_span("ingest Michael_Okonkwo_member_XQZ8842190.pdf")` reaches the exporter with that name intact. Safe today — every name is a literal — but the module's promise reads as covering the whole span. No runtime redaction of the name was added: a name built from a runtime value is a design error to catch in review, not to paper over. |
+| 16 | — | `.env.example` notes the unreachable-collector case | With `TARA_TRACING_ENABLED=true` and nothing listening at `TARA_OTLP_ENDPOINT`, process exit blocks a few seconds on export retries, with connection warnings on stderr. Ingestion and retrieval are unaffected and nothing raises — it degrades gracefully, but it surprises. No new setting was added. |
+
+**Two limits worth knowing, demonstrated during execution rather than assumed:**
+
+- **Redaction is not a backstop for filenames.** `redact_phi("Michael_Okonkwo_member_XQZ8842190.pdf")` returns the string completely unchanged — Presidio does not recognise underscore-joined names, and that is exactly how real uploads are named. Keeping such a value off the span is the only defence; running it through redaction is not.
+- **`test_no_span_carries_phi` guards call-site discipline, not redaction.** After Task 5, not one span attribute is a string, so redaction is a no-op for these flows. That test proves no call site puts a PHI-bearing value on a span; `test_span_redaction.py` and the integration cases in `test_span_emitter.py` are what prove redaction works. Neither covers the other — a distinction that starts to matter when Epic 1 M4 adds the first string-valued attribute (the question, the answer).
+
+**Recorded, deliberately not done here:**
+
+- `doc_id` is absent from the `ingest_document` span, so a trace cannot be tied back to a stored document, and the idempotent dedup-hit path is attribute-identical to a fast failure. `doc_id` is a `uuid4().hex`, not PHI. Deferred to the Epic 1 M4 handoff.
+- The `sqlite3.IntegrityError` dedup-race branch in `ingest_document()` has no test in the suite. Pre-existing; M3 re-indented it, and that re-indent is verified by AST comparison and by executing the other error paths, never by executing that branch.
+- Ruff's isort (`I`) rules are not enabled, so import-group drift is caught only by review. Enabling them would reformat imports repo-wide — out of scope for a behaviour-neutral module.
