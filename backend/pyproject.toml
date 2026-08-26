@@ -29,6 +29,13 @@ dependencies = [
     "ollama>=0.3",               # client for local models (Qwen3 / Llama / Gemma) via Ollama
     "openai>=1.0",               # OpenAI-compatible client: LM Studio (local) + hosted OpenAI-style endpoints
 
+    # Hosted generation on Google Cloud Agent Platform (formerly Vertex AI).
+    # Two packages because ChatGoogleGenerativeAI (Gemini) and VertexModelGardenLlama
+    # (Llama/Mistral MaaS) live in different ones; ChatVertexAI is deprecated since
+    # 3.2.0 with removal at 4.0.0, so it is deliberately not used.
+    "langchain-google-genai>=4.3",
+    "langchain-google-vertexai>=3.2,<4",
+
     # PHI redaction before any span export or hosted egress
     "presidio-analyzer>=2.2",
     "presidio-anonymizer>=2.2",

@@ -24,7 +24,7 @@ class Answer:
     safety_flag: str  # "none" | "emergency"
 
 
-def answer_question(question: str, prefer_hosted: bool = False) -> Answer:
+def answer_question(question: str, prefer_agent_platform: bool = False) -> Answer:
     # 1) Safety pre-check — short-circuit on emergencies.
     triage_result = screen_for_emergency(question)
     if triage_result.is_emergency:
@@ -39,7 +39,7 @@ def answer_question(question: str, prefer_hosted: bool = False) -> Answer:
     ]
 
     # 3) Grounded, citable answer (local by default; hosted only if opted in).
-    llm_client = get_llm_client(prefer_hosted=prefer_hosted)
+    llm_client = get_llm_client(prefer_agent_platform=prefer_agent_platform)
     raw_answer = llm_client.generate(ANSWER_SYSTEM_PROMPT, build_user_prompt(question, excerpts))
 
     # 4) Map cited chunk_ids -> Citations, then append safety framing (§3.5 order).

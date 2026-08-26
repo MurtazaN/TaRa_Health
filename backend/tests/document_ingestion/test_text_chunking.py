@@ -56,3 +56,24 @@ def test_consecutive_chunks_overlap_when_overlap_tokens_positive():
     # Overlap must not break the exact-slice citation invariant.
     for chunk in chunks:
         assert page_text[chunk.char_start:chunk.char_end] == chunk.text
+
+
+@pytest.mark.unit
+def test_chunk_spans_defaults_come_from_config(monkeypatch):
+    """Chunk sizing is coupled to the embedding model's limit, so it must be
+    configuration — not a hard-coded function default no operator can reach."""
+    from tara import config
+    from tara.document_ingestion.text_chunking import chunk_spans
+    from tara.document_ingestion.text_extraction import ExtractedSpan
+
+    monkeypatch.setenv("TARA_CHUNK_TARGET_TOKENS", "10")
+    monkeypatch.setenv("TARA_CHUNK_OVERLAP_TOKENS", "0")
+    config.get_settings.cache_clear()
+
+    page_text = "\n".join(f"line number {i} with several words" for i in range(40))
+    spans = [ExtractedSpan(page=1, char_start=0, char_end=len(page_text), text=page_text)]
+    chunks = chunk_spans("doc-1", spans)
+
+    config.get_settings.cache_clear()
+    # A 10-token budget over ~40 lines must produce many small chunks, not one big one.
+    assert len(chunks) > 5

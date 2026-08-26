@@ -1,4 +1,4 @@
-# Epic 0 · M3 — epic1_handoff
+# Epic 0 · M4 — epic1_handoff
 
 - **Parent:** [Epic 0 — Foundation](README.md) — overview · decisions · build order · global constraints.
 - **Seams:** the bridge back to [Epic 1](../epic1_grounded_qa/README.md). Records the deltas Epic 0's decisions impose on Epic 1 [M3](../epic1_grounded_qa/M3_retrieval.md), [M4](../epic1_grounded_qa/M4_grounded_answering.md), [M5](../epic1_grounded_qa/M5_safety.md), and [M8](../epic1_grounded_qa/M8_eval_harness.md).
@@ -43,8 +43,8 @@
 | 1 | **Structured output via Instructor** | `llm_clients/structured_completion.py` exposes `generate_structured_object()`. The answering call returns a validated Pydantic model carrying the answer text and the list of cited chunk identifiers. |
 | 2 | **Citation mapping stops being string parsing** | `_map_cited_chunks_to_citations` at `question_answerer.py:51-57` currently plans to regex `[chunk_id]` markers out of free text. With a typed response model the identifiers arrive as a list, so the function maps identifiers to `Citation` objects and nothing more. |
 | 3 | **Answering spans land here** | M2 deliberately left `answer_question` uninstrumented because it cannot run until M5. Add `ask_question`, `llm_generate`, and `map_citations` spans using `traced_span()`. |
-| 4 | **Hosted egress passes through redaction** | When `model_mode` is `hosted` or `hybrid`, the assembled context goes through `redact_phi()` before the call. |
-| 5 | **Local backend routing is still owed** | `get_llm_client()` hard-returns `OllamaClient` while `local_llm_backend` defaults to `openai_compatible`. M4 must add the OpenAI-compatible client and route on the setting. |
+| 4 | **Agent Platform egress passes through redaction** | When `generation_mode` is `agent_platform` or `hybrid`, the assembled context goes through `redact_phi()` before the call to `AgentPlatformClient` (`llm_clients/agent_platform_client.py`, Epic 0 M5 — replaces the `hosted_client.py` stub this row originally pointed at). The egress payload is unchanged from what was planned here: the system prompt plus one assembled user prompt, never the corpus and never at ingestion time. |
+| 5 | **Local backend routing** | Done in Epic 0 M5: `get_llm_client()` routes on `local_llm_backend` between `OllamaClient` and `OpenAICompatibleClient` (`llm_clients/openai_compatible_client.py`). No longer owed by M4. |
 
 ### 3.2 M3 — retrieval (reopened by the reranker)
 

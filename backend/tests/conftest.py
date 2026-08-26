@@ -31,7 +31,7 @@ def isolated_env(tmp_path, monkeypatch):
     from tara import config
 
     monkeypatch.setenv("TARA_DATA_DIR", str(tmp_path / "data"))
-    monkeypatch.setenv("TARA_MODEL_MODE", "local")
+    monkeypatch.setenv("TARA_GENERATION_MODE", "local")
     config.get_settings.cache_clear()
     settings = config.get_settings()
     config.ensure_data_dirs(settings)
@@ -79,7 +79,7 @@ def offline_ingest_env(tmp_path, monkeypatch):
     from tara.semantic_search import text_embedder
 
     monkeypatch.setenv("TARA_DATA_DIR", str(tmp_path / "data"))
-    monkeypatch.setenv("TARA_MODEL_MODE", "local")
+    monkeypatch.setenv("TARA_GENERATION_MODE", "local")
     monkeypatch.setenv("TARA_EMBED_DIM", "256")
     config.get_settings.cache_clear()
     settings = config.get_settings()
@@ -98,3 +98,23 @@ def offline_ingest_env(tmp_path, monkeypatch):
 
     yield settings
     config.get_settings.cache_clear()
+
+
+@pytest.fixture(autouse=True)
+def never_resolve_real_credentials(monkeypatch):
+    """Fail loudly if any test reaches for real Google credentials.
+
+    A missed monkeypatch would otherwise attempt a live ADC lookup — slow in CI,
+    and on a developer's machine it would silently succeed and hit the network.
+    """
+    def _refuse(*args, **kwargs):
+        raise AssertionError(
+            "A test attempted to resolve Application Default Credentials. "
+            "Patch the client accessor instead (agent_platform_client._chat_model)."
+        )
+
+    try:
+        import google.auth
+    except ImportError:
+        return
+    monkeypatch.setattr(google.auth, "default", _refuse)

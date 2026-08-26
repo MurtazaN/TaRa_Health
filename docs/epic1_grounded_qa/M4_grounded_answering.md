@@ -26,6 +26,7 @@
   - This is the main point where data may leave the device (if using a hosted model).
   - **Decision:** `TARA_MODEL_MODE` is `local` / `hosted` / `hybrid`, defaulting to `local` (Ollama); the hosted path uses Anthropic; local-vs-hosted is never a code change.
   - **All** provider settings live in `Settings`, including `TARA_ANTHROPIC_API_KEY`; a startup validator fails loudly when `model_mode in (hosted, hybrid)` and the key is missing — no module hard-codes an env lookup.
+  - **Superseded by Epic 0 M5:** this routing decision (direct Anthropic key) did not ship. Hosted generation is `generation_mode` (`local` / `agent_platform` / `hybrid`) via `AgentPlatformClient` on Google Cloud Agent Platform, authenticated with Application Default Credentials — **no provider API key**. See [`docs/epic0_foundation/M4_epic1_handoff.md` §3.1](../epic0_foundation/M4_epic1_handoff.md#31-m4--grounded-answering) and [`docs/epic0_foundation/M5_model_backends.md`](../epic0_foundation/M5_model_backends.md).
   - Retrieval and indexing stay local regardless; only the minimal assembled context + question ever go to the model.
   - The LLM client is created once with a configured timeout (`TARA_LLM_TIMEOUT_SECONDS`) so a stalled model can't hang the request indefinitely.
   - What remains open is empirical — whether the local model's quality suffices for grounded reasoning (OPEN_QUESTIONS.md #1, settled via M8).
