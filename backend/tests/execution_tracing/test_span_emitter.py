@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import pytest
 from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.trace import StatusCode
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
@@ -64,4 +65,31 @@ def test_exception_inside_the_span_propagates(captured_spans):
     with pytest.raises(ValueError):
         with traced_span("failing_step"):
             raise ValueError("boom")
-    assert captured_spans.get_finished_spans()[0].name == "failing_step"
+    finished = captured_spans.get_finished_spans()[0]
+    assert finished.name == "failing_step"
+    assert finished.status.status_code is StatusCode.ERROR
+    recorded_events = {event.name: dict(event.attributes) for event in finished.events}
+    assert recorded_events["exception"]["exception.type"] == "ValueError"
+    assert "exception.message" not in recorded_events["exception"]
+    assert "exception.stacktrace" not in recorded_events["exception"]
+
+
+def test_exception_message_with_a_phi_bearing_filename_does_not_reach_the_span(captured_spans):
+    """The real leak: an ingestion error's message can carry the uploaded filename.
+
+    `redact_phi()` does not recognise underscore-joined names, so a filename
+    like this one cannot be cleaned by redaction — it must never reach the
+    span in the first place. Guards against a regression back to OTel's
+    default `record_exception=True`/`set_status_on_exception=True` behavior.
+    """
+    with pytest.raises(ValueError):
+        with traced_span("failing_step"):
+            raise ValueError("No extractable text in 'Michael_Okonkwo_member_XQZ8842190.pdf'.")
+    finished = captured_spans.get_finished_spans()[0]
+    recorded_events = {event.name: dict(event.attributes) for event in finished.events}
+    assert "Okonkwo" not in str(finished.status.description)
+    assert "XQZ8842190" not in str(finished.status.description)
+    for event_attributes in recorded_events.values():
+        for attribute_value in event_attributes.values():
+            assert "Okonkwo" not in str(attribute_value)
+            assert "XQZ8842190" not in str(attribute_value)
