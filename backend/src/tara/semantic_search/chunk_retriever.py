@@ -11,8 +11,8 @@ from dataclasses import dataclass
 from tara.app_errors import IndexMismatchError
 from tara.config import get_settings
 from tara.data_models import Chunk
-from tara.local_data_stores import chunk_records, embedding_index_meta, vector_index
 from tara.execution_tracing.span_emitter import record_span_attribute, traced_span
+from tara.local_data_stores import chunk_records, embedding_index_meta, vector_index
 from tara.local_data_stores.db_connection import connect_db
 from tara.semantic_search import text_embedder
 
@@ -51,7 +51,11 @@ def retrieve_chunks(question: str, doc_type_hint: str | None = None) -> list[Ret
         try:
             vector_index.load_vector_extension(conn)
             if not _is_index_ready(conn):
+                # Nothing indexed yet also returns [], so record `abstained` here
+                # too — "retrieval returned nothing" must be one queryable
+                # condition, not two with different attribute shapes.
                 record_span_attribute(retrieval_span, "index_ready", False)
+                record_span_attribute(retrieval_span, "abstained", True)
                 return []
             with traced_span("embed_query"):
                 question_embedding = text_embedder.embed_query(question)
