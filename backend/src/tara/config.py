@@ -132,6 +132,14 @@ class Settings(BaseSettings):
     # only job. Size is noise next to the local model this app already runs.
     phi_redaction_nlp_model: str = "en_core_web_lg"
 
+    # ---- Execution tracing (README §6.1) ----
+    # Off by default: a span carries the question and retrieved document text.
+    # `span_redaction` strips PHI before any value reaches a span, so a trace
+    # shows retrieval behaviour without carrying identity.
+    tracing_enabled: bool = False
+    otlp_endpoint: str = "http://localhost:6006/v1/traces"
+    service_name: str = "tara-backend"
+
     # ---- Upload limits (§3.1a) ----
     max_upload_bytes: int = _DEFAULT_MAX_UPLOAD_BYTES
     # Page ceiling for PDF parsing: bounds CPU/memory on a pathological (but small)
