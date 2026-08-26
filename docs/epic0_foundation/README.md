@@ -3,7 +3,7 @@
 - **Epic 0 scope:** the infrastructure and tooling layer every other epic stands on — monorepo separation, CI/CD, containers, execution tracing, PHI redaction, and the settled third-party stack.
 - **Explicitly out of scope:** any change to an Epic 1 module *contract*. M1, M2, and M3 here are behaviour-neutral; the functional work stays governed by [epic1_grounded_qa/](../epic1_grounded_qa/README.md).
 - **Why "Epic 0":** it precedes Epic 1 in build order but was designed after it, once the missing layer became visible. Modules M1 and M2 must land before Epic 1 M4, or M4's files get moved twice.
-- **Status:** Approved 2026-08-14. **M1 implemented 2026-08-15** — restructure, dependency repair, Makefile, containers, and CI are live on `main`-bound branch `feat/foundation-and-stack`. M2, M3, and M4 are not yet built.
+- **Status:** Approved 2026-08-14. **M1 (2026-08-15), M2 (2026-08-24), M5 (2026-08-25) and M3 (2026-08-25) are implemented**; M1, M2 and M5 are merged to `main`, M3 is on branch `feat/execution-tracing`. M4 is a planning boundary with no task list and nothing to build.
 - **Last updated:** 2026-08-15.
 
 ---
@@ -181,7 +181,7 @@
 |---|---|---|---|
 | 1 | [M1 — repo_restructure](M1_repo_restructure.md) | No | **DONE 2026-08-15** — suite held at 67 passed / 3 skipped; `make up` then `curl http://127.0.0.1:8000/` returns `200` |
 | 2 | [M2 — phi_redaction](M2_phi_redaction.md) | No | **DONE 2026-08-24** — gated recall 31/31; **true recall 33/64 = 51.6%** with 15 documented `xfail` gaps. The gated figure is a regression guard, not a measure of protection |
-| 3 | [M3 — execution_tracing](M3_execution_tracing.md) | No | An `/upload` call produces a span tree at `localhost:6006` with no name or member identifier in any attribute |
+| 3 | [M3 — execution_tracing](M3_execution_tracing.md) | No | **DONE 2026-08-25** — suite at 234 passed / 4 skipped / 16 xfailed, up from 214/4/16 with no pre-existing test changed; `make lint` / `make typecheck` clean. `make up` then `/upload` produced an `ingest_document` trace in Phoenix with children `extract_text_spans`, `chunk_spans`, `embed_chunks` and a real integer `chunk_count`; **no name or member identifier in any attribute, event, or status description** — verified programmatically against Phoenix's REST API, not by eye. Exception messages are dropped rather than redacted, because Presidio cannot redact an underscore-joined filename. See the module doc's "As built" section for 8 ruled deviations |
 | 4 | [M4 — epic1_handoff](M4_epic1_handoff.md) | n/a — a planning boundary | Epic 1 resumes at its own M4 |
 | 5 | [M5 — model_backends](M5_model_backends.md) | **Yes** — replaces the model layer | **DONE 2026-08-25** — suite at 213 passed / 4 skipped / 16 xfailed; `make lint` / `make typecheck` clean; `Settings()` fails closed on an empty project or unacknowledged egress when generation egresses. **The container offline-embedding guarantee (spec §10 assertion 12) PASSES** — verified on `linux/aarch64` with real weights under `--network none`: `max_seq_length` 32768, dim 1024, image 5.3 GB, peak RSS 1410 MB. Eleven of the twelve §9.3 assertions pass; assertion 9 is a strict `xfail` pending Epic 1 M4, because `screen_for_emergency()` is still an Epic 1 stub. See [§9.1](#91-m5-acceptance--what-is-actually-pinned) |
 

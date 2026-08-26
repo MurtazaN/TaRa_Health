@@ -1,5 +1,6 @@
-# Two services. LM Studio deliberately stays on the HOST - it needs direct
-# graphics-hardware access - and the backend reaches it via host.docker.internal.
+# Three services: the backend, and Phoenix as the trace viewer (Epic 0 M3).
+# LM Studio deliberately stays on the HOST - it needs direct graphics-hardware
+# access - and the backend reaches it via host.docker.internal.
 name: tara
 services:
   tara-backend:
