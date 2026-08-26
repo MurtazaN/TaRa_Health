@@ -19,6 +19,7 @@ _DEFAULT_MAX_UPLOAD_BYTES = 50 * 1024 * 1024
 LocalLLMBackend = Literal["ollama", "openai_compatible"]
 GenerationMode = Literal["local", "agent_platform", "hybrid"]
 AgentPlatformProvider = Literal["gemini", "llama", "mistral"]
+EmbeddingModelDtype = Literal["float32", "bfloat16", "float16"]
 
 # backend/src/tara/config.py -> parents: [0]=tara, [1]=src, [2]=backend, [3]=repo root.
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -101,6 +102,14 @@ class Settings(BaseSettings):
     # (M5 §4.3). The container sets HF_HUB_OFFLINE instead, which does the same
     # job at the library level.
     embed_model_offline_only: bool = False
+    # float32, NOT the weights' native bfloat16. Measured 2026-08-25 in the
+    # linux/aarch64 container: a 446-token chunk took 456s under bfloat16 versus
+    # 1.2s under float32 - a 380x difference, because torch's aarch64 CPU build
+    # has no optimised bf16 matmul, so oneDNN fails its check (visible as
+    # torchCheckFail inside mkldnn_matmul) and falls back to a scalar reference
+    # path. Costs memory: peak RSS 1410MB -> 3337MB. Kept configurable because
+    # the tradeoff inverts on hardware with real bf16 support.
+    embed_model_dtype: EmbeddingModelDtype = "float32"
 
     # ---- Retrieval ----
     top_k: int = 6

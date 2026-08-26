@@ -183,7 +183,7 @@
 | 2 | [M2 — phi_redaction](M2_phi_redaction.md) | No | **DONE 2026-08-24** — gated recall 31/31; **true recall 33/64 = 51.6%** with 15 documented `xfail` gaps. The gated figure is a regression guard, not a measure of protection |
 | 3 | [M3 — execution_tracing](M3_execution_tracing.md) | No | An `/upload` call produces a span tree at `localhost:6006` with no name or member identifier in any attribute |
 | 4 | [M4 — epic1_handoff](M4_epic1_handoff.md) | n/a — a planning boundary | Epic 1 resumes at its own M4 |
-| 5 | [M5 — model_backends](M5_model_backends.md) | **Yes** — replaces the model layer | **DONE 2026-08-25** — suite holds at 213 passed / 4 skipped / 16 xfailed; `make lint`/`make typecheck` clean. **Two gaps remain open, listed in §9.1 below.** Read that before treating spec §10 as met |
+| 5 | [M5 — model_backends](M5_model_backends.md) | **Yes** — replaces the model layer | **DONE 2026-08-25** — suite at 213 passed / 4 skipped / 16 xfailed; `make lint` / `make typecheck` clean; `Settings()` fails closed on an empty project or unacknowledged egress when generation egresses. **The container offline-embedding guarantee (spec §10 assertion 12) PASSES** — verified on `linux/aarch64` with real weights under `--network none`: `max_seq_length` 32768, dim 1024, image 5.3 GB, peak RSS 1410 MB. Eleven of the twelve §9.3 assertions pass; assertion 9 is a strict `xfail` pending Epic 1 M4, because `screen_for_emergency()` is still an Epic 1 stub. See [§9.1](#91-m5-acceptance--what-is-actually-pinned) |
 
 - **Ordering is load-bearing.** M1 must land before any Epic 1 M4 code, or M4's files get moved twice.
 - **M1 and M2 are behaviour-neutral by design.** Every functional change lives in Epic 1.
@@ -191,7 +191,7 @@
 
 ### 9.1 M5 acceptance — what is actually pinned
 
-- Spec [§10](M5_model_backends.md#10-acceptance) asks for "all 12 assertions in §9.3 present and passing". Eleven are; one is not, and the container check has never been run. Recorded here rather than implied by a green suite.
+- Spec [§10](M5_model_backends.md#10-acceptance) asks for "all 12 assertions in §9.3 present and passing". Eleven pass; assertion 9 is a strict `xfail` pending Epic 1 M4. The container check has now been run and passes — measurements below. Recorded here rather than implied by a green suite.
 
 | §9.3 | Pinned behaviour | State |
 |---|---|---|
@@ -206,9 +206,24 @@
 | 9 | Emergency question returns `safety_flag: "emergency"` and HTTP 200 while every Agent Platform call raises | **`xfail(strict=True)`, pending Epic 1 M4.** `screen_for_emergency()` is still an Epic 1 stub raising `NotImplementedError`, so the real path cannot pass yet. `test_real_answer_path_triages_emergency_while_agent_platform_is_down` runs that real path and is recorded as a strict xfail; it flips to a genuine pass when M4 lands. The sibling test covers response shaping only and no longer claims §4.3 |
 | 10 | `verify_generation_model()` rejects an unknown model with no network | **Passing** |
 | 11 | `chunk_target_tokens` above the model's limit fails at startup | **Passing**, now with a 10% safety margin below the limit rather than a bare `>` (§5.5 asks for margin) |
-| 12 | `generation_mode: "local"` performs no network call across a full ingest-and-ask cycle | **Partially pinned.** `test_local_ingest_and_retrieval_resolve_no_hostname` covers ingest+retrieve with a faked embedder. The container half is unverified — see below |
+| 12 | `generation_mode: "local"` performs no network call across a full ingest-and-ask cycle | **Pinned in both halves.** `test_local_ingest_and_retrieval_resolve_no_hostname` covers ingest+retrieve with a faked embedder; the container half was verified 2026-08-25 with real weights under `--network none` — see below |
 
-- **The container offline-embedding check has NEVER been run.** Docker was unavailable in the implementing environment, so `make up` followed by `docker compose -f deployment/docker/compose.yaml run --rm --network none tara-backend python -c "..."` (plan Task 6 Step 5) has not happened. A human must run it, record `max_seq_length` and `dim`, and only then treat the container path as proven.
+- **The container offline-embedding check PASSES**, run 2026-08-25 on `linux/aarch64` with real weights and `--network none`:
+
+| Measured | Value |
+|---|---|
+| Model / revision | `Qwen/Qwen3-Embedding-0.6B` @ `97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3` |
+| `max_seq_length` | **32768** — closes spec §13 open item 5, which had been assumed rather than observed because this model ships no `sentence_bert_config.json` |
+| Usable chunk ceiling (10% margin) | 29491, against `chunk_target_tokens` 800 — 2.7% of the limit |
+| Embedding dimension | 1024, unit length 1.000001 |
+| Image size | **5.3 GB** |
+| Load dtype | **float32**, not the weights' native bfloat16 — see below |
+| Embedding throughput | **1.24 s/chunk** (446-token chunks, batch of 8); ~249 s for a 200-chunk document |
+| Peak RSS (embedding path) | **3345 MB**; ~4.0 GB once M3 wires in `redact_phi()` and spaCy loads |
+
+- **Container memory: allocate 5 GB.** Peak resident is 3.3 GB today and ~4.0 GB once M3 loads `en_core_web_lg` alongside the embedding model, so 4 GB is the floor and leaves no margin. Image size is unrelated to this figure.
+- **The model is loaded as float32, and that is a 380x decision, not a detail.** Measured 2026-08-25 on `linux/aarch64`: one 446-token chunk took **456 s** under the weights' native bfloat16 versus **1.2 s** under float32. torch's aarch64 CPU build has no optimised bf16 matmul, so oneDNN fails its check — visible as `torchCheckFail` inside `at::native::mkldnn_matmul` — and falls back to a scalar reference path. Under bfloat16 a 200-chunk document would take roughly 25 hours, which would have made in-process embedding unusable in a container. `embed_model_dtype` keeps this configurable, because the tradeoff inverts on hardware with real bf16 support; it costs memory (1410 MB -> 3345 MB) and is pinned by `test_model_is_loaded_as_float32_not_native_bfloat16`.
+- **The image ships CPU-only torch, deliberately.** The default wheel resolves to `torch+cu130`, which drags in ~3.5 GB of NVIDIA runtime (`nvidia/cu13`, cuDNN, NCCL, cuSPARSELt, nvshmem) plus `triton` — none of which can execute, since `torch.cuda.is_available()` is False in this container and on every host this app targets. `Dockerfile.backend` installs from PyTorch's CPU index first. Measured effect: image 12 GB → 5.3 GB, torch 859 MB → 580 MB, and peak RSS 1762 MB → 1410 MB, because some of those libraries were resident and not merely on disk. This is a Dockerfile concern only, never a `pyproject.toml` pin, so a developer's Mac keeps its MPS-capable build.
 - **Two residual risks are recorded rather than fixed**, both deliberately deferred to their own cycle:
   1. `lmstudio_host` / `ollama_host` are unvalidated URLs, so a non-loopback value egresses assembled excerpts under `generation_mode: "local"` with no gate. `web_app.main()` now WARNS when the active backend's host is not loopback; it does not refuse, because LM Studio on another machine on a LAN is legitimate.
   2. BAA coverage for Llama / Mistral MaaS specifically is still unconfirmed (spec §13 item 1).

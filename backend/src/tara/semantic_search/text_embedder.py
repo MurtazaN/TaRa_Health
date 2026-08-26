@@ -42,6 +42,7 @@ def _model() -> "SentenceTransformer":
     Imported lazily so that merely importing this module does not pull torch,
     and so tests can replace this accessor without loading 1.19 GB of weights.
     """
+    import torch
     from sentence_transformers import SentenceTransformer
 
     settings = get_settings()
@@ -56,6 +57,10 @@ def _model() -> "SentenceTransformer":
         # "works fully offline" guarantee on a bare host (M5 §4.3). The container
         # gets the same effect from HF_HUB_OFFLINE.
         local_files_only=settings.embed_model_offline_only,
+        # Load dtype is a performance cliff, not a detail: the weights ship as
+        # bfloat16, which torch's aarch64 CPU build cannot matmul efficiently -
+        # measured 456s versus 1.2s for one 446-token chunk. See config.
+        model_kwargs={"torch_dtype": getattr(torch, settings.embed_model_dtype)},
     )
 
 

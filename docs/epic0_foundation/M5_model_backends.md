@@ -338,7 +338,8 @@ class AgentPlatformUnavailableError(RuntimeError):
 - `gemini-embedding-001` may well retrieve better than a 0.6B open model. Unmeasured either way, and deliberately not the deciding factor: keeping documents on-device was.
 
 ### 11.4 Cold starts
-- ~1.19 GB of weights plus torch and spaCy make this a heavy image. Irrelevant on a VM or a laptop; a real cost on Cloud Run. It is a hosting consideration, deferred with hosting.
+- Measured 2026-08-25: **5.3 GB image**, down from 12 GB once CPU-only torch replaced the default `torch+cu130` wheel, which shipped ~3.5 GB of NVIDIA runtime that cannot execute on any host this app targets.
+- Remaining weight is inherent: ~1.19 GB of embedding weights, 425 MB of spaCy, and 580 MB of CPU torch. Irrelevant on a VM or a laptop; a real cold-start cost on Cloud Run. Still a hosting consideration, deferred with hosting.
 
 ## 12. Verified facts underpinning these decisions
 
@@ -366,7 +367,7 @@ class AgentPlatformUnavailableError(RuntimeError):
 2. **`gemini-3.5-flash` retirement date** was not found in the docs consulted. Confirm before treating it as a long-lived default.
 3. **`SentenceTransformer.encode()` signature for `prompt_name`** and the `revision` argument — confirm against `sentence-transformers>=3.0` at implementation time. The prompts themselves are verified.
 4. **`tenacity` availability** as a `langchain-core` transitive dependency — confirm, or write ~15 lines of explicit backoff for the generation retry rather than add a direct dependency.
-5. **Qwen3-Embedding ships no `sentence_bert_config.json`**, so the effective `max_seq_length` comes from the model/tokenizer config. Confirm the loaded value at implementation rather than assume 32768; §5.5's guard depends on reading it correctly.
-6. **CPU embedding latency** on a realistic document is unmeasured. Record it during implementation so the ingestion UX is a known quantity.
+5. ~~**Qwen3-Embedding ships no `sentence_bert_config.json`**, so the effective `max_seq_length` must be confirmed rather than assumed.~~ **RESOLVED 2026-08-25:** measured **32768** in the container, against a `chunk_target_tokens` of 800 — 2.7% of the limit, with the §5.5 margin guard satisfied.
+6. ~~**CPU embedding latency** on a realistic document is unmeasured.~~ **RESOLVED 2026-08-25:** 1.24 s per 446-token chunk in a batch of 8 on `linux/aarch64`, i.e. ~249 s for a 200-chunk document — but ONLY with `embed_model_dtype: float32`. The weights' native bfloat16 measures 456 s per chunk (~25 h per document) because torch's aarch64 CPU build falls back to a scalar matmul. See README §9.1.
 7. **Per-provider `gcp_location`** deferred. MaaS models are region-limited; a single `gcp_location` holds until a real conflict appears.
 8. **Hosting remains out of scope**, deferred 2026-08-24. §12's last row is why that costs this module nothing.

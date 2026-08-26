@@ -93,6 +93,30 @@ def test_model_is_constructed_with_the_pinned_revision(monkeypatch):
 
     assert captured["model"] == "Qwen/Qwen3-Embedding-0.6B"
     assert captured["kwargs"]["revision"] == "97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3"
+
+
+@pytest.mark.unit
+def test_model_is_loaded_as_float32_not_native_bfloat16(monkeypatch):
+    """The weights ship as bfloat16, and loading them that way is a 380x
+    performance cliff on aarch64 CPU: 456s versus 1.2s for one 446-token chunk,
+    measured 2026-08-25. Nothing else in the suite would notice the regression,
+    because every other test replaces the model wholesale."""
+    import torch
+
+    captured: dict = {}
+
+    class _RecordingSentenceTransformer:
+        def __init__(self, model_name_or_path, **kwargs):
+            captured["kwargs"] = kwargs
+
+    import sentence_transformers
+    monkeypatch.setattr(sentence_transformers, "SentenceTransformer",
+                        _RecordingSentenceTransformer)
+    text_embedder._model.cache_clear()
+    text_embedder._model()
+    text_embedder._model.cache_clear()
+
+    assert captured["kwargs"]["model_kwargs"]["torch_dtype"] is torch.float32
     # Defaults false so a fresh install can fetch the weights once; the point is
     # that the flag is WIRED, so a host that must stay offline can set it instead
     # of silently pulling 1.19 GB on the first ingestion (M5 §4.3).

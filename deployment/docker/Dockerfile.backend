@@ -15,7 +15,16 @@ WORKDIR /app
 # uv resolves and installs far faster than pip on this dependency set.
 RUN pip install --no-cache-dir uv
 
-# Dependency layer first, so source edits do not invalidate the install.
+# CPU-only torch FIRST, so the resolver never pulls the CUDA build. Measured
+# 2026-08-25: the default wheel is torch+cu130, which drags in ~3.5GB of NVIDIA
+# runtime (cu13, cuDNN, NCCL, cuSPARSELt, nvshmem) plus triton — none of which
+# can execute, because torch.cuda.is_available() is False in this container and
+# on every host this app targets. This stays a Dockerfile concern, NOT a
+# pyproject pin, so a developer's Mac keeps its MPS-capable build.
+RUN uv pip install --system --index-url https://download.pytorch.org/whl/cpu torch
+
+# Dependency layer next, so source edits do not invalidate the install. torch is
+# already satisfied above, so this resolves against the CPU build.
 COPY backend/pyproject.toml /app/backend/pyproject.toml
 COPY backend/src/tara/__init__.py /app/backend/src/tara/__init__.py
 RUN uv pip install --system -e "/app/backend"

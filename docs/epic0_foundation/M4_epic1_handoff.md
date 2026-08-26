@@ -1,4 +1,4 @@
-# Epic 0 · M3 — epic1_handoff
+# Epic 0 · M4 — epic1_handoff
 
 - **Parent:** [Epic 0 — Foundation](README.md) — overview · decisions · build order · global constraints.
 - **Seams:** the bridge back to [Epic 1](../epic1_grounded_qa/README.md). Records the deltas Epic 0's decisions impose on Epic 1 [M3](../epic1_grounded_qa/M3_retrieval.md), [M4](../epic1_grounded_qa/M4_grounded_answering.md), [M5](../epic1_grounded_qa/M5_safety.md), and [M8](../epic1_grounded_qa/M8_eval_harness.md).
