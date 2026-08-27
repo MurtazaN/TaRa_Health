@@ -183,3 +183,56 @@ def test_a_failed_audit_write_does_not_destroy_a_good_answer(offline_flow, monke
     answer = answer_question("what is my specialist copay?")
 
     assert "Your specialist copay is $40." in answer.text
+
+
+@pytest.mark.integration
+def test_a_generation_failure_still_writes_one_audit_row(offline_flow, monkeypatch):
+    """The fourth terminal outcome, which test_every_outcome_writes_one_audit_row
+    does not cover: the model itself failing.
+
+    A request that reached generation and then failed must leave a local record
+    that it happened. On the hosted path that row is the only evidence an egress
+    attempt was ever made, which is exactly the record wanted afterwards.
+    """
+    from tara.app_errors import StructuredOutputError
+    from tara.local_data_stores.db_connection import connect_db
+
+    def explode(*args, **kwargs):
+        raise StructuredOutputError("the model returned nothing usable")
+
+    monkeypatch.setattr(question_answerer, "generate_structured_object", explode)
+
+    with pytest.raises(StructuredOutputError):
+        answer_question("what is my specialist copay?")
+
+    conn = connect_db()
+    try:
+        rows = conn.execute(
+            "SELECT answer, model_route, safety_flag, citations FROM queries"
+        ).fetchall()
+    finally:
+        conn.close()
+    assert len(rows) == 1
+    # The failure CLASS is recorded, not the upstream message: the row records
+    # that a request happened, and is not a place to store an error's text.
+    assert "StructuredOutputError" in rows[0]["answer"]
+    assert "returned nothing usable" not in rows[0]["answer"]
+    assert rows[0]["model_route"] == "local"
+    assert rows[0]["safety_flag"] == "none"
+
+
+@pytest.mark.integration
+def test_a_generation_failure_is_raised_not_turned_into_an_abstention(
+    offline_flow, monkeypatch
+):
+    # A broken model must not read as "I don't see that in your documents",
+    # which would hide a fault behind a plausible answer.
+    from tara.app_errors import StructuredOutputError
+
+    def explode(*args, **kwargs):
+        raise StructuredOutputError("the model returned nothing usable")
+
+    monkeypatch.setattr(question_answerer, "generate_structured_object", explode)
+
+    with pytest.raises(StructuredOutputError):
+        answer_question("what is my specialist copay?")

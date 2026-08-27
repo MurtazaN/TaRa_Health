@@ -40,6 +40,11 @@ ABSTENTION_MESSAGE = "I don't see that in your documents."
 # How much cited text the interface shows beside a citation.
 _SNIPPET_CHARACTER_LIMIT = 240
 
+# Written into the audit row's answer column when generation itself fails. Names
+# the failure CLASS only: the row records THAT a request happened, and is not a
+# place to keep an upstream error's text.
+GENERATION_FAILURE_MARKER = "<generation failed: {failure_type}>"
+
 
 @dataclass
 class Answer:
@@ -152,14 +157,36 @@ def answer_question(question: str, prefer_agent_platform: bool = False) -> Answe
              "page": retrieved.chunk.page, "text": retrieved.chunk.text}
             for retrieved in retrieved_chunks
         ]
-        with traced_span("llm_generate", model_route=model_route):
-            generated: GroundedAnswer = generate_structured_object(
-                ANSWER_SYSTEM_PROMPT,
-                build_user_prompt(question, excerpts),
-                GroundedAnswer,
-                GROUNDED_ANSWER_JSON_SCHEMA,
-                prefer_agent_platform=prefer_agent_platform,
+        try:
+            with traced_span("llm_generate", model_route=model_route):
+                generated: GroundedAnswer = generate_structured_object(
+                    ANSWER_SYSTEM_PROMPT,
+                    build_user_prompt(question, excerpts),
+                    GroundedAnswer,
+                    GROUNDED_ANSWER_JSON_SCHEMA,
+                    prefer_agent_platform=prefer_agent_platform,
+                )
+        except Exception as generation_error:
+            # Record BEFORE re-raising. A failure is a terminal outcome like any
+            # other, and on the egress path this row is the only local evidence
+            # that an attempt to send excerpts off the device was ever made.
+            # Re-raised rather than abstained: a broken model must not read as
+            # "I don't see that in your documents", which would hide a fault
+            # behind a plausible answer.
+            _record_query(
+                ask_span,
+                question,
+                retrieved_chunks,
+                Answer(
+                    text=GENERATION_FAILURE_MARKER.format(
+                        failure_type=type(generation_error).__qualname__
+                    ),
+                    citations=[],
+                    safety_flag="none",
+                ),
+                model_route,
             )
+            raise
 
         # 4) Map cited ids -> Citations (contract post-processing step 1).
         with traced_span("map_citations") as citation_span:
