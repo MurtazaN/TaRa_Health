@@ -57,6 +57,19 @@ REDACTED_ENTITIES = [
     # destroy the clinical content this module exists to preserve.
 ]
 
+# The set used when text is sent to a model off this device. Identical to
+# REDACTED_ENTITIES except that DATE_TIME is excluded, because DATE_TIME does not
+# only take calendar dates: M2's measurements record it consuming "2026" in
+# "Plan: Gold PPO 2026", the "30-day" in a waiting period, a "daily" dosage
+# frequency, and the blood-pressure reading "120/80". Those are the facts an
+# answer is made of, and a model that cannot see them cannot answer from them.
+# Identity is removed by PERSON, the identifier entities, LOCATION and the rest,
+# none of which are relaxed here. Kept beside REDACTED_ENTITIES so the one
+# difference between the two lists is visible on one screen.
+EGRESS_REDACTED_ENTITIES = [
+    entity for entity in REDACTED_ENTITIES if entity != "DATE_TIME"
+]
+
 # Presidio defaults `global_regex_flags` to re.I|re.M|re.S. A global IGNORECASE
 # makes the label match in any case but also lets the value class match prose,
 # so it is dropped and applied inline per-token instead.

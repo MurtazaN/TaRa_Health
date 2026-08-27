@@ -72,6 +72,32 @@ def test_persistent_quota_error_raises_unavailable_with_bounded_attempts(egress_
 
 
 @pytest.mark.unit
+def test_a_credentials_failure_is_classified_on_the_structured_path_too(
+    egress_env, monkeypatch
+):
+    """The taxonomy must not depend on which generation method was called.
+
+    Credentials fail when the chat model is CONSTRUCTED, not when it is invoked.
+    If construction happens outside the retry wrapper, a DefaultCredentialsError
+    reaches the API layer unmapped, and the operator gets an unhandled 500
+    instead of the message telling them to run 'gcloud auth'.
+    """
+    from google.auth.exceptions import DefaultCredentialsError
+
+    def refuse_to_build():
+        raise DefaultCredentialsError("no ADC")
+
+    monkeypatch.setattr(agent_platform_client, "_chat_model", refuse_to_build)
+    monkeypatch.setattr(agent_platform_client, "_backoff_seconds", lambda attempt: 0.0)
+
+    with pytest.raises(AgentPlatformConfigError) as raised:
+        agent_platform_client.AgentPlatformClient().generate_structured_json(
+            "sys", "user", {"type": "object", "properties": {}}
+        )
+    assert "Application Default Credentials" in str(raised.value)
+
+
+@pytest.mark.unit
 @pytest.mark.parametrize("status", [403, 404])
 def test_operator_errors_are_never_retried(egress_env, monkeypatch, status):
     model = _FakeChatModel(failures=[_api_error(status) for _ in range(5)])

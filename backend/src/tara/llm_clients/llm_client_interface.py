@@ -69,10 +69,7 @@ def get_llm_client(prefer_agent_platform: bool = False) -> "LLMClient":
     if resolve_model_route(prefer_agent_platform) == "agent_platform":
         from tara.llm_clients.agent_platform_client import AgentPlatformClient
 
-        # TODO(M4 Task 4): drop this ignore. AgentPlatformClient gains
-        # generate_structured_json (with its egress redaction) in Task 4; until
-        # then it satisfies only the `generate` half of the protocol.
-        return AgentPlatformClient()  # type: ignore[return-value]
+        return AgentPlatformClient()
     if get_settings().local_llm_backend == "openai_compatible":
         return OpenAICompatibleClient()
     return OllamaClient()

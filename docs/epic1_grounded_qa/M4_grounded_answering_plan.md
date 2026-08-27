@@ -926,10 +926,20 @@ class AgentPlatformClient:
         contract identical to the local backends' and validation in one place.
         """
         messages = [("system", system_prompt), ("human", _redacted_for_egress(user_prompt))]
-        structured_model = _chat_model().with_structured_output(
-            json_schema, method="json_schema"
-        )
-        return json.dumps(_invoke_with_retry(lambda: structured_model.invoke(messages)))
+
+        def send_one_attempt() -> Any:
+            # The chat model is BUILT inside the retried callable, exactly as it
+            # is in generate(). Construction is where a credentials failure
+            # surfaces, so building it outside would let a
+            # DefaultCredentialsError escape _classify_failure and reach the API
+            # layer unmapped — the error taxonomy must not depend on which
+            # generation method the caller happened to use.
+            structured_model = _chat_model().with_structured_output(
+                json_schema, method="json_schema"
+            )
+            return structured_model.invoke(messages)
+
+        return json.dumps(_invoke_with_retry(send_one_attempt))
 ```
 
 - [ ] **Step 5: Delete the temporary type suppression Task 2 left behind**
