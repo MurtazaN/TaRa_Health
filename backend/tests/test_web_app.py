@@ -133,13 +133,6 @@ def test_emergency_answer_is_shaped_into_a_200_response(api_client, monkeypatch)
 
 
 @pytest.mark.integration
-@pytest.mark.xfail(
-    strict=True,
-    reason="safety_checks.emergency_triage.screen_for_emergency() is still an Epic 1 "
-           "stub that raises NotImplementedError. This test is the real §4.3 "
-           "assertion and flips to a genuine pass when Epic 1 M4 implements it; "
-           "until then it is recorded as unpinned rather than faked green.",
-)
 def test_real_answer_path_triages_emergency_while_agent_platform_is_down(
     offline_ingest_env, monkeypatch
 ):
