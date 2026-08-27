@@ -1290,14 +1290,19 @@ def _is_checked_figure(figure: str) -> bool:
 def _normalise_figure(figure: str) -> str:
     """Reduce a figure to the form used for comparison on both sides.
 
-    Strips the currency symbol, the percent sign and thousands separators, then
-    drops a trailing zero decimal, so "$1,200" in an answer matches "1200.00" in
-    a document. Comparing raw text would fail on formatting alone.
+    Strips the currency symbol and thousands separators, then drops a trailing
+    zero decimal, so "$1,200" in an answer matches "1200.00" in a document:
+    comparing raw text would fail on formatting alone. A percent sign is KEPT,
+    because it changes what the number means -- a stated "30%" must not be
+    grounded by the unrelated "30" in "30-day wait". The currency symbol is not
+    kept, because documents routinely put the "$" in a table header rather than
+    in the cell.
     """
+    percent_suffix = "%" if figure.endswith("%") else ""
     stripped = figure.lstrip("$").rstrip("%").replace(",", "")
     if "." in stripped:
         stripped = stripped.rstrip("0").rstrip(".")
-    return stripped
+    return stripped + percent_suffix
 
 
 def verify_numbers_are_grounded(
@@ -1328,7 +1333,7 @@ def verify_numbers_are_grounded(
 - [ ] **Step 4: Run the tests**
 
 Run: `cd backend && python -m pytest tests/question_answering/test_numeric_grounding.py -v`
-Expected: 13 passed
+Expected: 12 passed
 
 - [ ] **Step 5: Commit**
 
