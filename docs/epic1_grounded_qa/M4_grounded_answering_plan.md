@@ -1259,7 +1259,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Sequence
+from collections.abc import Sequence
 
 # Matches an optional currency symbol, a digit run with optional thousands
 # separators, an optional decimal part, and an optional percent sign.
@@ -1446,7 +1446,7 @@ from __future__ import annotations
 import json
 import uuid
 from datetime import datetime, timezone
-from typing import Sequence
+from collections.abc import Sequence
 
 from tara.data_models import Citation
 from tara.local_data_stores.db_connection import connect_db
