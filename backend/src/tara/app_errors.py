@@ -36,3 +36,13 @@ class AgentPlatformUnavailableError(RuntimeError):
     request may succeed later. Maps to HTTP 503.
 
     Carries no user content: web_app renders str(exc) straight to the client."""
+
+
+class StructuredOutputError(RuntimeError):
+    """The model could not produce output matching the requested schema within the
+    retry budget. A broken model is an error, NOT an abstention: telling the user
+    "I don't see that in your documents" when the model malfunctioned would hide a
+    fault behind a plausible answer. Maps to HTTP 502.
+
+    Carries no model output: web_app renders str(exc) straight to the client, and
+    a malformed payload may contain document text."""
