@@ -16,6 +16,7 @@ from tara.app_errors import (
     AgentPlatformUnavailableError,
     IndexMismatchError,
     IngestionError,
+    StructuredOutputError,
     UploadError,
 )
 from tara.config import get_settings
@@ -52,6 +53,13 @@ def _handle_agent_platform_config_error(request: Request, exc: AgentPlatformConf
 def _handle_agent_platform_unavailable(request: Request, exc: AgentPlatformUnavailableError) -> JSONResponse:
     # 503: transient — quota or availability. The same request may succeed later.
     return JSONResponse(status_code=503, content={"detail": str(exc)})
+
+
+@app.exception_handler(StructuredOutputError)
+def _handle_structured_output_error(request: Request, exc: StructuredOutputError) -> JSONResponse:
+    # 502: the model answered, but not in a shape the app can trust. An upstream
+    # fault, not the operator's and not the user's. The message carries no model output.
+    return JSONResponse(status_code=502, content={"detail": str(exc)})
 
 
 class AskRequest(BaseModel):
