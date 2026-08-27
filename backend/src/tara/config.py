@@ -207,6 +207,27 @@ class Settings(BaseSettings):
         return self
 
     @model_validator(mode="after")
+    def _require_redaction_when_generation_egresses(self) -> "Settings":
+        """Refuse to egress with the PHI scrubber switched off.
+
+        The third egress precondition, alongside the project and the signed-BAA
+        acknowledgement above. `redact_phi()` is a deliberate NO-OP when
+        `phi_redaction_enabled` is false: it warns once and returns the text
+        unchanged. `AgentPlatformClient` routes every outbound payload through
+        it, so a flag left off after local debugging would send complete,
+        unredacted excerpts -- names and member ids included -- to Google on
+        every query, with nothing but one easily missed startup warning.
+        """
+        if self.generation_mode in ("agent_platform", "hybrid") and not self.phi_redaction_enabled:
+            raise ValueError(
+                "generation_mode is 'agent_platform'/'hybrid' but "
+                "TARA_PHI_REDACTION_ENABLED is false. Answering a question would send "
+                "unredacted excerpts, including names and member identifiers, to Google "
+                "Cloud. Enable redaction, or switch generation_mode back to 'local'."
+            )
+        return self
+
+    @model_validator(mode="after")
     def _embed_dim_is_positive(self) -> "Settings":
         # Static sanity only. The real model<->dim integrity check is
         # verify_embedding_dimension(), which embeds one probe string with the

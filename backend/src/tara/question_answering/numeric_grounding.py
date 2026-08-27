@@ -14,6 +14,21 @@ from typing import Sequence
 # separators, an optional decimal part, and an optional percent sign.
 _FIGURE_PATTERN = re.compile(r"\$?\d[\d,]*(?:\.\d+)?%?")
 
+# Digit runs that are NOT quantities: calendar dates and dash-separated
+# identifiers (group and policy numbers, phone numbers). They are removed from
+# the grounding source before figures are collected, because a chunk is scanned
+# with no idea what any digit run means: without this, the "2026" of a plan
+# effective date grounds a fabricated "$2026" copay, and the "4000" of group
+# number 4000-1234 grounds a fabricated "$4000" -- a wrong amount reaching the
+# user WITH a citation, which is the exact outcome this module exists to stop.
+# Removal is one-sided: it applies to the document, never to the answer, so a
+# figure can only ever become LESS grounded, never more.
+_NON_QUANTITY_PATTERN = re.compile(
+    r"\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b"   # 01/01/2026, 1-1-26
+    r"|\b\d{4}-\d{1,2}-\d{1,2}\b"          # 2026-01-01
+    r"|\b\d{3,}-[\d-]{3,}\b"                # 4000-1234, 555-123-4567
+)
+
 
 @dataclass
 class GroundingVerdict:
@@ -66,7 +81,9 @@ def verify_numbers_are_grounded(
     grounded_forms = {
         _normalise_figure(found_figure)
         for chunk_text in cited_chunk_texts
-        for found_figure in _FIGURE_PATTERN.findall(chunk_text)
+        for found_figure in _FIGURE_PATTERN.findall(
+            _NON_QUANTITY_PATTERN.sub(" ", chunk_text)
+        )
     }
     ungrounded_figures = [
         answer_figure
