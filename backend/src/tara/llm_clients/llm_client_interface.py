@@ -8,7 +8,7 @@ change, never a code change (design §3.5).
 """
 from __future__ import annotations
 
-from typing import Protocol
+from typing import Any, Protocol
 
 
 class LLMClient(Protocol):
@@ -17,6 +17,35 @@ class LLMClient(Protocol):
     def generate(self, system_prompt: str, user_prompt: str) -> str:
         """Return the model's text response for one system+user prompt pair."""
         ...
+
+    def generate_structured_json(
+        self, system_prompt: str, user_prompt: str, json_schema: dict[str, Any]
+    ) -> str:
+        """Return the model's response as raw JSON text conforming to `json_schema`.
+
+        Raw text rather than a parsed object, deliberately: validation and retry
+        live in `structured_completion`, so the three backends cannot drift on
+        what a valid response is. Each backend uses its own server's schema
+        facility, which constrains generation rather than merely requesting it.
+        """
+        ...
+
+
+def resolve_model_route(prefer_agent_platform: bool = False) -> str:
+    """Name the backend `get_llm_client()` will return: "local" or "agent_platform".
+
+    Exists so a caller can record or display the route WITHOUT importing the
+    egress client, which would pull the whole Vertex stack into the local path.
+    `get_llm_client()` reads this function, so the two can never disagree.
+    """
+    from tara.config import get_settings
+
+    settings = get_settings()
+    if settings.generation_mode == "agent_platform":
+        return "agent_platform"
+    if settings.generation_mode == "hybrid" and prefer_agent_platform:
+        return "agent_platform"
+    return "local"
 
 
 def get_llm_client(prefer_agent_platform: bool = False) -> "LLMClient":
@@ -37,15 +66,13 @@ def get_llm_client(prefer_agent_platform: bool = False) -> "LLMClient":
     from tara.llm_clients.ollama_client import OllamaClient
     from tara.llm_clients.openai_compatible_client import OpenAICompatibleClient
 
-    settings = get_settings()
-    if settings.generation_mode == "agent_platform":
+    if resolve_model_route(prefer_agent_platform) == "agent_platform":
         from tara.llm_clients.agent_platform_client import AgentPlatformClient
 
-        return AgentPlatformClient()
-    if settings.generation_mode == "hybrid" and prefer_agent_platform:
-        from tara.llm_clients.agent_platform_client import AgentPlatformClient
-
-        return AgentPlatformClient()
-    if settings.local_llm_backend == "openai_compatible":
+        # TODO(M4 Task 4): drop this ignore. AgentPlatformClient gains
+        # generate_structured_json (with its egress redaction) in Task 4; until
+        # then it satisfies only the `generate` half of the protocol.
+        return AgentPlatformClient()  # type: ignore[return-value]
+    if get_settings().local_llm_backend == "openai_compatible":
         return OpenAICompatibleClient()
     return OllamaClient()

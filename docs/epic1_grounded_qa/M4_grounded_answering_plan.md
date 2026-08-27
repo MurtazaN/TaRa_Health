@@ -698,6 +698,7 @@ git commit -m "feat: validate and retry structured model output in one place"
 **Files:**
 - Modify: `backend/src/tara/phi_redaction.py`
 - Modify: `backend/src/tara/llm_clients/agent_platform_client.py`
+- Modify: `backend/src/tara/llm_clients/llm_client_interface.py` (delete Task 2's temporary type suppression — Step 5)
 - Test: `backend/tests/llm_clients/test_agent_platform_egress_redaction.py`
 
 **Interfaces:**
@@ -931,15 +932,26 @@ class AgentPlatformClient:
         return json.dumps(_invoke_with_retry(lambda: structured_model.invoke(messages)))
 ```
 
-- [ ] **Step 5: Run the tests**
+- [ ] **Step 5: Delete the temporary type suppression Task 2 left behind**
+
+In `backend/src/tara/llm_clients/llm_client_interface.py`, inside `get_llm_client()`, delete the three-line `TODO(M4 Task 4)` comment and the trailing `# type: ignore[return-value]` on the `return AgentPlatformClient()` line, leaving:
+
+```python
+        return AgentPlatformClient()
+```
+
+Task 2 added that suppression because `AgentPlatformClient` did not yet implement `generate_structured_json`, so it satisfied only half the `LLMClient` protocol. Step 4 above gives it the missing method, so the suppression is now false. This repository does NOT enable mypy's `warn_unused_ignores`, so a forgotten suppression fails no gate — it must be removed deliberately. After deleting it, `make typecheck` must still pass, which is the proof the method genuinely satisfies the protocol.
+
+- [ ] **Step 6: Run the tests**
 
 Run: `cd backend && python -m pytest tests/llm_clients/ tests/test_phi_redaction.py -v`
 Expected: all pass, including the pre-existing Agent Platform retry and error-taxonomy tests
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add backend/src/tara/phi_redaction.py \
+        backend/src/tara/llm_clients/llm_client_interface.py \
         backend/src/tara/llm_clients/agent_platform_client.py \
         backend/tests/llm_clients/test_agent_platform_egress_redaction.py
 git commit -m "feat: redact identity inside the egress client, keeping dates"
