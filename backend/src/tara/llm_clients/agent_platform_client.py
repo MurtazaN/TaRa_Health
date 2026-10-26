@@ -17,12 +17,14 @@ asked for a client, so the egress library must not be loaded merely because
 """
 from __future__ import annotations
 
+import json
 import time
 from functools import lru_cache
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable
 
 from tara.app_errors import AgentPlatformConfigError, AgentPlatformUnavailableError
 from tara.config import get_settings
+from tara.phi_redaction import EGRESS_REDACTED_ENTITIES, redact_phi
 
 if TYPE_CHECKING:
     from langchain_core.language_models.chat_models import BaseChatModel
@@ -213,26 +215,68 @@ def verify_generation_model() -> None:
         )
 
 
+def _redacted_for_egress(user_prompt: str) -> str:
+    """Strip identity from the one payload that leaves the device.
+
+    Redaction lives HERE rather than at the caller for the same reason
+    `traced_span()` is the only span-creation path: a rule applied at every call
+    site is a rule that will eventually be missed, and missing it once is a PHI
+    disclosure. The system prompt is not redacted — it is a constant this
+    repository authors and contains no user content.
+    """
+    return redact_phi(user_prompt, entities=EGRESS_REDACTED_ENTITIES)
+
+
+def _invoke_with_retry(send_one_attempt: Callable[[], Any]) -> Any:
+    """Run `send_one_attempt`, retrying only the failures the taxonomy allows."""
+    last_error: Exception | None = None
+    for attempt in range(1, _MAX_ATTEMPTS + 1):
+        try:
+            return send_one_attempt()
+        except Exception as error:  # noqa: BLE001 - re-raised as our taxonomy
+            last_error = error
+            if not _is_retryable_failure(error):
+                raise _classify_failure(error) from error
+            if attempt < _MAX_ATTEMPTS:
+                time.sleep(_backoff_seconds(attempt))
+    # The loop body always assigns last_error before falling through here (the
+    # only exit that isn't an early `return` or `raise` is exhausting the
+    # retry budget, which requires at least one caught exception) — the
+    # assert only narrows the type for mypy, it changes no behavior.
+    assert last_error is not None
+    raise _classify_failure(last_error) from last_error
+
+
 class AgentPlatformClient:
     """LLMClient backed by Google Cloud Agent Platform (Gemini or MaaS)."""
 
     def generate(self, system_prompt: str, user_prompt: str) -> str:
-        messages = [("system", system_prompt), ("human", user_prompt)]
-        last_error: Exception | None = None
-        for attempt in range(1, _MAX_ATTEMPTS + 1):
-            try:
-                # .content is typed str | list[...] on a LangChain message; this app
-                # sends text-only prompts, so coerce rather than silence the checker.
-                return str(_chat_model().invoke(messages).content)
-            except Exception as error:  # noqa: BLE001 - re-raised as our taxonomy
-                last_error = error
-                if not _is_retryable_failure(error):
-                    raise _classify_failure(error) from error
-                if attempt < _MAX_ATTEMPTS:
-                    time.sleep(_backoff_seconds(attempt))
-        # The loop body always assigns last_error before falling through here (the
-        # only exit that isn't an early `return` or `raise` is exhausting the
-        # retry budget, which requires at least one caught exception) — the
-        # assert only narrows the type for mypy, it changes no behavior.
-        assert last_error is not None
-        raise _classify_failure(last_error) from last_error
+        messages = [("system", system_prompt), ("human", _redacted_for_egress(user_prompt))]
+        # .content is typed str | list[...] on a LangChain message; this app
+        # sends text-only prompts, so coerce rather than silence the checker.
+        return str(_invoke_with_retry(lambda: _chat_model().invoke(messages).content))
+
+    def generate_structured_json(
+        self, system_prompt: str, user_prompt: str, json_schema: dict[str, Any]
+    ) -> str:
+        """Return raw JSON text constrained to `json_schema` by the provider.
+
+        A dict schema is passed rather than a Pydantic class, so LangChain returns
+        a dict that is dumped straight back to text — keeping this method's
+        contract identical to the local backends' and validation in one place.
+        """
+        messages = [("system", system_prompt), ("human", _redacted_for_egress(user_prompt))]
+
+        def send_one_attempt() -> Any:
+            # The chat model is BUILT inside the retried callable, exactly as it
+            # is in generate(). Construction is where a credentials failure
+            # surfaces, so building it outside would let a
+            # DefaultCredentialsError escape _classify_failure and reach the API
+            # layer unmapped — the error taxonomy must not depend on which
+            # generation method the caller happened to use.
+            structured_model = _chat_model().with_structured_output(
+                json_schema, method="json_schema"
+            )
+            return structured_model.invoke(messages)
+
+        return json.dumps(_invoke_with_retry(send_one_attempt))

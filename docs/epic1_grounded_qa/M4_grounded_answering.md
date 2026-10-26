@@ -53,3 +53,57 @@
 - For answerable cost/coverage/lab questions, the stated **number** matches ground truth (not just the citation page).
 - Questions the docs can't answer are declined, never invented.
 - No ungrounded number survives post-processing.
+
+---
+
+## As built — 2026-08-26
+
+Built to [`M4_grounded_answering_plan.md`](M4_grounded_answering_plan.md) in ten tasks; the code is the authority where it and the plan differ.
+
+### Decisions taken with the repository owner
+
+| # | Decision | Consequence |
+|---|---|---|
+| 1 | M4 implements a keyword-only `screen_for_emergency()` and a static `apply_safety_framing()` | M4 becomes runnable end to end. The hazard classifier, the custom taxonomy and the safety-recall fixture remain M5 work. |
+| 2 | The M3 retrieval reranker is deferred out of M4 | `chunk_reranker.py`, the four `TARA_RERANK_*` settings and the second abstention route get their own plan cycle. Recorded in [`../epic0_foundation/M4_epic1_handoff.md`](../epic0_foundation/M4_epic1_handoff.md) §6 step 3. |
+| 3 | An ungrounded figure abstains the whole answer | No answer text is ever edited by the app. The acceptance criterion becomes one assertion. |
+| 4 | Structured output uses each backend's native JSON-schema facility, not Instructor | Deviates from the handoff document's §3.1 row 1. No new dependency, and nothing to remove when LangGraph lands (handoff §4.3 row 3). |
+| 5 | Egress redaction happens inside `AgentPlatformClient`, not in the answerer | One audited chokepoint that no future caller can forget, mirroring why `traced_span()` is the only span-creation path. |
+| 6 | `EGRESS_REDACTED_ENTITIES` lives in `phi_redaction.py` beside `REDACTED_ENTITIES` | The difference between the two lists is visible on one screen. |
+
+### Suite at the end of the module
+
+- **311 passed, 2 skipped, 15 xfailed** — up from the pre-M4 baseline of 243 passed, 4 skipped, 16 xfailed.
+- `make lint` and `make typecheck` clean.
+- The two skips are the real-embedding-model test and the new opt-in LM Studio constrained-decoding probe (`TARA_TEST_REAL_LOCAL_MODEL=1` to run it).
+- The 15 remaining xfails are all PHI-recall cases; the web-app xfail of Epic 0 §9.1 row 9 flipped to a genuine pass here.
+
+### Plan defects found and fixed during implementation
+
+| # | Defect | Fix |
+|---|---|---|
+| 1 | `Sequence` was imported from the deprecated `typing` alias, which fails the ruff lint gate | Corrected to `collections.abc`. |
+| 2 | `_normalise_figure` stripped the percent sign, so an answer claiming "30%" was grounded by the unrelated "30" in "30-day wait" — fail-open in the check whose whole purpose is catching wrong figures | The percent sign is now part of the comparison key. The currency symbol is still stripped, so "$40" grounds against a bare "40.00". |
+| 3 | Adding a second method to the `LLMClient` protocol broke typecheck, because `AgentPlatformClient` only gained its implementation in Task 4 | Resolved with a temporary suppression that Task 4 deletes; the plan now carries that deletion as an explicit step. |
+| 4 | The plan built the structured chat model outside the retry wrapper, so a credentials failure — which surfaces at construction — escaped the error taxonomy on the structured path only | Construction now happens inside the retried callable, and a test pins it. |
+| 5 | The numeric-grounding check was originally given `citation.snippet`, truncated to 240 characters for display, so a figure further into a cited chunk would abstain a correct answer | It now receives the full cited chunk text. Caught during plan self-review, before implementation. |
+
+### Deviation in the acceptance fixture
+
+- The plan's acceptance fixture ingests all four plan facts onto one page, and `offline_ingest_env`'s deterministic bag-of-words embedder scored the copay question against that four-fact chunk at **0.236**, under the real `abstain_threshold` of 0.25.
+- Effect if left alone: criterion 1 failed at retrieval, and criterion 4 passed for the wrong reason — it abstained before the numeric check ever ran.
+- Fix: `tests/question_answering/test_m4_acceptance.py`'s `ingested_plan` fixture pins `TARA_ABSTAIN_THRESHOLD=0.1` for these four tests only. No assertion was changed.
+- Why this and not a reworded fixture: the fake embedder's cosine scale is not the real model's — the same mismatch already documented in `tests/test_web_app.py` — and tuning fixture text to clear a threshold is fragile against both a threshold change and a chunking change. Retrieval, storage, the vector index and the whole post-retrieval flow stay real; the off-topic question still scores 0.0 and still abstains. Calibrating the real threshold is M8.
+
+### Whole-branch review — findings and their disposition
+
+Reviewed 2026-08-26 against the privacy boundary, the fail-open surface of the numeric check, the flow's order, and the cross-task seams. Three findings were raised, one was found by follow-up verification, and two are fixed.
+
+| # | Finding | Disposition |
+|---|---|---|
+| 1 | Any digit run in a cited chunk grounded a figure, so a plan effective date of "01/01/2026" grounded a fabricated "$2026" copay, and "Group Number: 4000-1234" grounded a fabricated "$4000" | **Fixed.** `_NON_QUANTITY_PATTERN` in `numeric_grounding.py` removes calendar dates and dash-separated identifiers from the grounding source before figures are collected. Removal is one-sided — it applies to the document, never to the answer — so a figure can only become less grounded, never more. Four fabrication cases and three no-regression cases pin it |
+| 2 | Nothing refused to start in `agent_platform`/`hybrid` mode with `phi_redaction_enabled` false, in which case `redact_phi()` warns once and passes text through unchanged | **Fixed.** `_require_redaction_when_generation_egresses` in `config.py` is the third egress precondition, alongside the project and the BAA acknowledgement. Local mode still allows the flag off, since nothing egresses there |
+| 3 | The excerpt prompt embeds the source filename, and Presidio cannot redact an underscore-joined name — measured: `priya_raghunathan_eob.pdf`, `Raghunathan_Priya_EOB_2026.pdf` and `A1234567_benefits.pdf` all reach the model unchanged, while `jamal-washington-labs.pdf` redacts correctly | **DEFERRED by the repository owner, 2026-08-27.** A live identity disclosure on the hosted path only; it cannot fire in the default local configuration, which requires no filename to leave the device. The repository already recorded the underlying fact — `span_emitter.py` drops exception messages rather than redacting them for exactly this reason. The remedy when taken up: drop the filename from the assembled prompt entirely, since the model cites by chunk id and the app maps that id back to filename, page and character span for display |
+| 4 | No audit row is written when generation raises — retry budget exhausted, credentials missing, or the hosted service unavailable — although the module docstring and the plan both state every terminal outcome is recorded | **Fixed 2026-08-27.** The row is written before the failure is re-raised, carrying `GENERATION_FAILURE_MARKER` with the failure CLASS only, never the upstream message. The failure is still raised rather than abstained, so a broken model cannot read as "I don't see that in your documents". Two tests pin it: one that the row exists and holds no upstream text, one that the exception still propagates. `test_every_outcome_writes_one_audit_row` covers three outcomes; these cover the fourth |
+
+- **Found sound by the same review:** the emergency pre-check cannot be bypassed; citations are mapped before figures are verified and framing is appended last; the local path never imports the egress client; no error message carries document text; the retry never echoes a rejected payload.

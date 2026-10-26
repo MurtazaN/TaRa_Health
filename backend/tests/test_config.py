@@ -52,6 +52,30 @@ def test_egress_modes_accept_project_and_acknowledgement(mode):
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize("mode", ["agent_platform", "hybrid"])
+def test_egress_modes_refuse_to_start_with_redaction_disabled(mode):
+    """The third egress precondition, alongside the project and the acknowledgement.
+
+    redact_phi() is a documented no-op when phi_redaction_enabled is false: it
+    warns once and returns the text unchanged. AgentPlatformClient relies on it
+    for every payload, so an operator who left the flag off after local
+    debugging would send complete, unredacted excerpts to Google with nothing
+    but a startup warning. Refuse to start instead.
+    """
+    with pytest.raises(ValidationError):
+        _settings(generation_mode=mode, gcp_project="my-project",
+                  phi_egress_acknowledged=True, phi_redaction_enabled=False)
+
+
+@pytest.mark.unit
+def test_local_mode_allows_redaction_to_be_disabled():
+    # Nothing egresses in local mode, so the flag stays a developer convenience.
+    settings = _settings(generation_mode="local", gcp_project="",
+                         phi_egress_acknowledged=False, phi_redaction_enabled=False)
+    assert settings.phi_redaction_enabled is False
+
+
+@pytest.mark.unit
 def test_embed_model_is_pinned_by_revision():
     # An unpinned model silently changes the vector space between installs.
     s = _settings()

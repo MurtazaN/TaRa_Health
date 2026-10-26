@@ -8,11 +8,26 @@ markers already in the text.
 """
 from __future__ import annotations
 
+# Static rather than model-generated, deliberately: this text runs after the
+# grounding check, so anything generated here would be unverified content
+# appended to a verified answer.
+SAFETY_FRAMING = (
+    "\n\nThis is general information drawn from your own documents, not medical "
+    "advice or a coverage guarantee. For anything serious, sudden, or persistent, "
+    "please speak with a healthcare professional, and confirm benefits with your "
+    "insurer before you rely on them."
+)
+
 
 def apply_safety_framing(answer_text: str) -> str:
     """Return `answer_text` with the informational framing and care nudge appended.
 
-    TODO (Slice 4): keep it light so it doesn't bury the actual answer; on
-    framing failure, return the answer with a default static disclaimer rather
-    than erroring (§3.3)."""
-    raise NotImplementedError
+    Append-only and idempotent. It runs LAST, after citation mapping and the
+    numeric-grounding check, so the framing text can never be mistaken for
+    grounded content or inspected as if it were.
+    """
+    if not answer_text:
+        return answer_text
+    if SAFETY_FRAMING.strip() in answer_text:
+        return answer_text
+    return answer_text + SAFETY_FRAMING
